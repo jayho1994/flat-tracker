@@ -83,7 +83,7 @@
 </style>
 </head>
 <body>
-<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v2.3</span></h1><span class="st" id="syncSt">—</span></header>
+<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v2.4</span></h1><span class="st" id="syncSt">—</span></header>
 
 <main>
   <!-- 看板 -->
@@ -172,7 +172,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v2.3 · 2026-09-09</p>
+    <p class="hint" style="margin-top:12px">v2.4 · 2026-09-09</p>
   </section>
 </main>
 
@@ -434,7 +434,8 @@ async function importUrl(){
     const p=await api('POST','/import',{url});
     const fill=(el,v)=>{if(v!=null&&v!==''&&!$(el).value)$(el).value=v};
     fill('x_src',p.業主自讓?'業主自讓':p.來源);fill('x_rent',p.叫價);fill('x_sqft',p.實用呎);fill('x_gross',p.建築呎);fill('x_rooms',p.房數);fill('x_toilets',p.廁所數);fill('x_age',p.樓齡);fill('x_facing',p.座向);fill('x_mgmt',p.管理費);fill('x_listed',p.刊登日期);fill('x_estate',p.屋苑);fill('x_block',p.座);fill('x_floor',p.樓層);fill('x_bldg',p.大廈);fill('x_addr',p.地址);fill('x_dist',p.分區);fill('x_area',p.地區);fill('x_sale',p.售價);
-    if(p.標題&&!$('x_note').value)$('x_note').value='[網頁標題] '+p.標題+(p.描述?'\n'+p.描述.slice(0,300):'');
+    if(!$('x_note').value){const bits=[];if(p.港鐵分鐘!=null)bits.push('港鐵站 '+p.港鐵分鐘+' 分鐘');if(p.實用率)bits.push('實用率 '+p.實用率+'%');if(p.標題)bits.push('[網頁標題] '+p.標題);if(p.描述)bits.push(p.描述.slice(0,300));$('x_note').value=bits.join('\n')}
+    if(p.港鐵分鐘!=null&&p.港鐵分鐘<=8){const c=document.querySelector('input[name="tags"][value="近港鐵"]');if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event('change'))}}
     const got=['屋苑','大廈','座','地址','分區','叫價','售價','實用呎','房數','樓齡'].filter(k=>p[k]!=null);
     $('importMsg').innerHTML=esc((p.warning?'⚠ '+p.warning+' ':'')+'已抓到：'+(got.join('、')||'無可用欄位，請人手填')+'。'+(p.叫價?'':'⚠ 未抓到月租，請人手填。')+'請核對。')+(p.raw?`<details style="margin-top:4px"><summary style="font-size:12px">診斷</summary><div class="mono" style="font-size:11px;word-break:break-all">title: ${esc(p.raw.title||'—')}<br>h1: ${esc(p.raw.h1||'—')}<br>json: ${esc(JSON.stringify(p.raw.json||{}))}<br>ld: ${p.raw.ldCount} · ${p.raw.bytes||'?'} bytes<br>租價候選: ${esc(JSON.stringify(p.raw.rentCandidates||[]))}<br>租字附近: ${esc((p.raw.rentCtx||[]).join(' ‖ '))}</div></details>`:'');
     suggestStack();
