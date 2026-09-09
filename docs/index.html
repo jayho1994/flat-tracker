@@ -47,7 +47,7 @@
   nav button.on{color:var(--ink);background:var(--soft);box-shadow:inset 0 3px 0 var(--tape)}
   .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:flex-end}
   .sheet.on{display:flex}
-  .panel{background:#fff;width:100%;max-height:93vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+  .panel{background:#fff;width:100%;max-height:calc(100vh - env(safe-area-inset-top) - 28px);overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
   .panel h2{margin-top:0}
   .stack{display:flex;flex-direction:column;gap:8px}
   .split{display:flex;gap:8px}.split>*{flex:1;min-width:0}
@@ -171,7 +171,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v2.0 · 2026-09-09</p>
+    <p class="hint" style="margin-top:12px">v2.1 · 2026-09-09</p>
   </section>
 </main>
 
@@ -192,10 +192,13 @@
       <div class="split"><input id="x_url" inputmode="url" autocapitalize="off" placeholder="https://www.28hse.com/..."><button class="sm tape" style="flex:0 0 auto" onclick="importUrl()">抓取</button></div>
       <div id="importMsg" class="hint"></div></div>
     <div class="split"><div><label class="f">屋苑 *</label><input id="x_estate" oninput="suggestStack()"></div><div style="flex:0 0 90px"><label class="f">座</label><input id="x_block" oninput="suggestStack()"></div></div>
+    <div><label class="f">大廈（期／閣）</label><input id="x_bldg" placeholder="安盛台 建安閣"></div>
+    <div class="split"><div><label class="f">地址</label><input id="x_addr" placeholder="太裕路7號"></div><div style="flex:0 0 110px"><label class="f">分區</label><input id="x_dist" placeholder="太古"></div></div>
     <div class="split"><div><label class="f">樓層</label><input id="x_floor"></div><div><label class="f">單位</label><input id="x_unit" oninput="suggestStack()" autocapitalize="characters"></div><div><label class="f">地區</label><select id="x_area"><option value="">—</option><option>港島</option><option>九龍</option><option>新界</option><option>離島</option></select></div></div>
     <div id="stackBox"></div>
     <div class="split"><div><label class="f">階段</label><select id="x_stage"><option>網上見到</option><option>已約睇</option><option>已睇</option><option>考慮中</option><option>已出價</option><option>談判中</option><option>已簽約</option><option>淘汰</option></select></div><div><label class="f">來源</label><select id="x_src"><option value="">—</option><option>28Hse</option><option>中原</option><option>美聯</option><option>Squarefoot</option><option>Spacious</option><option>業主自讓</option><option>其他</option></select></div></div>
     <div class="split"><div><label class="f">叫價（月租）</label><input id="x_rent" type="number" inputmode="numeric"></div><div><label class="f">實用呎</label><input id="x_sqft" type="number" inputmode="numeric"></div><div><label class="f">建築呎</label><input id="x_gross" type="number" inputmode="numeric"></div></div>
+    <div class="split"><div><label class="f">售價（參考，若同時放售）</label><input id="x_sale" type="number" inputmode="numeric"></div></div>
     <div class="split"><div><label class="f">房數</label><input id="x_rooms" type="number" inputmode="numeric"></div><div><label class="f">廁所數</label><input id="x_toilets" type="number" inputmode="numeric"></div><div><label class="f">樓齡</label><input id="x_age" type="number" inputmode="numeric"></div><div><label class="f">座向</label><select id="x_facing"><option value="">—</option><option>東</option><option>南</option><option>西</option><option>北</option><option>東南</option><option>西南</option><option>東北</option><option>西北</option></select></div></div>
     <div class="split"><div><label class="f">管理費／月</label><input id="x_mgmt" type="number" inputmode="numeric"></div><div><label class="f">差餉／季</label><input id="x_rates" type="number" inputmode="numeric"></div><div><label class="f">搬運估算</label><input id="x_move" type="number" inputmode="numeric"></div></div>
     <div><label class="f">包項目</label><div id="x_incl"></div></div>
@@ -382,7 +385,7 @@ function openDetail(id){curFlat=id;go('detail');tab('info');renderDetail()}
 function flatCard(f,compact){
   const rooms=roomsOf(f.id), gap=gapScore(f), p=psf(f);
   return `<div class="card tap" onclick="openDetail('${f.id}')">
-    <h3><span>${esc(flatTitle(f))||'（未命名）'}</span>${compact?'':`<span class="tag s-${esc(f.階段||'網上見到')}">${esc(f.階段||'網上見到')}</span>`}</h3>
+    <h3><span>${esc(flatTitle(f))||'（未命名）'}</span>${compact?'':`<span class="tag s-${esc(f.階段||'網上見到')}">${esc(f.階段||'網上見到')}</span>`}</h3>${f.大廈||f.分區?`<div class="sub">${[f.大廈,f.分區].filter(Boolean).map(esc).join(' · ')}</div>`:''}
     <div class="sub num">${money(f.叫價)}${p?' · '+p+'/呎':''}${f.實用呎?' · '+f.實用呎+'呎':''}${f.房數!=null?' · '+f.房數+'房':''}${f.廁所數!=null?f.廁所數+'廁':''}</div>
     <div class="sub"><span class="stars">${stars(avgScore(f))}</span>${gap>=2?' <span class="tag warn">分歧 '+gap+'</span>':''}${cfg.budget&&monthly(f)>n(cfg.budget)?' <span class="tag bad">超預算</span>':''}${rooms.length?' · '+rooms.length+' 房已量':''}${f.交樓日?' · 交樓 '+f.交樓日:''}${f.id.startsWith('tmp_')?' · <b style="color:var(--bad)">未同步</b>':''}</div>
     ${(f.標籤||[]).length?`<div>${f.標籤.map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div>`:''}
@@ -402,7 +405,7 @@ function renderDeadline(){
 }
 function renderList(){
   const q=norm($('q').value), st=$('fStage').value, area=$('fArea').value, rm=$('fRooms').value, bud=$('fBudget').checked, sort=$('fSort').value;
-  let l=DB.flats.filter(f=>(!st||(st==='active'?f.階段!=='淘汰':f.階段===st))&&(!area||f.地區===area)&&(!rm||(f.房數||0)>=+rm)&&(!bud||!cfg.budget||monthly(f)<=n(cfg.budget))&&(!q||norm(flatTitle(f)+(f.備註||'')).includes(q)));
+  let l=DB.flats.filter(f=>(!st||(st==='active'?f.階段!=='淘汰':f.階段===st))&&(!area||f.地區===area)&&(!rm||(f.房數||0)>=+rm)&&(!bud||!cfg.budget||monthly(f)<=n(cfg.budget))&&(!q||norm(flatTitle(f)+(f.大廈||'')+(f.地址||'')+(f.分區||'')+(f.備註||'')).includes(q)));
   const cmp={edited:(a,b)=>(b.edited||'').localeCompare(a.edited||''),score:(a,b)=>(avgScore(b)||0)-(avgScore(a)||0),gap:(a,b)=>(gapScore(b)||0)-(gapScore(a)||0),psf:(a,b)=>(psf(a)||9e9)-(psf(b)||9e9),rent:(a,b)=>(a.叫價||9e9)-(b.叫價||9e9),cost:(a,b)=>monthly(a)-monthly(b),handover:(a,b)=>(a.交樓日||'9')<(b.交樓日||'9')?-1:1,church:(a,b)=>(a.教會車程分鐘||9e9)-(b.教會車程分鐘||9e9),sqft:(a,b)=>(b.實用呎||0)-(a.實用呎||0)};
   l.sort(cmp[sort]||cmp.edited);
   $('list').innerHTML=l.length?l.map(f=>flatCard(f,false)).join(''):'<div class="empty">無符合結果。</div>';
@@ -414,7 +417,7 @@ function openFlat(id){
   const f=id?DB.flats.find(x=>x.id===id):null; fillAgentSelects();
   $('flatTitle').textContent=f?'編輯單位':'新增單位'; $('x_id').value=f?f.id:''; $('importMsg').textContent='';
   const set=(el,v)=>$(el).value=v==null?'':v;
-  set('x_url',f?f.來源連結:'');set('x_estate',f?f.屋苑:'');set('x_block',f?f.座:'');set('x_floor',f?f.樓層:'');set('x_unit',f?f.單位:'');set('x_area',f?f.地區:'');
+  set('x_url',f?f.來源連結:'');set('x_estate',f?f.屋苑:'');set('x_block',f?f.座:'');set('x_bldg',f?f.大廈:'');set('x_addr',f?f.地址:'');set('x_dist',f?f.分區:'');set('x_sale',f?f.售價:'');set('x_floor',f?f.樓層:'');set('x_unit',f?f.單位:'');set('x_area',f?f.地區:'');
   set('x_stage',f?(f.階段||'網上見到'):'網上見到');set('x_src',f?f.來源:'');set('x_rent',f?f.叫價:'');set('x_sqft',f?f.實用呎:'');set('x_gross',f?f.建築呎:'');
   set('x_rooms',f?f.房數:'');set('x_toilets',f?f.廁所數:'');set('x_age',f?f.樓齡:'');set('x_facing',f?f.座向:'');set('x_mgmt',f?f.管理費:'');set('x_rates',f?f.差餉季度:'');set('x_move',f?f.搬運估算:'');
   set('x_term',f?f.租期:'');set('x_free',f?f.免租期日:'');set('x_handover',f?f.交樓日:'');set('x_listed',f?f.刊登日期:'');set('x_visit',f?f.睇樓日期:'');
@@ -429,10 +432,10 @@ async function importUrl(){
   try{
     const p=await api('POST','/import',{url});
     const fill=(el,v)=>{if(v!=null&&v!==''&&!$(el).value)$(el).value=v};
-    fill('x_src',p.業主自讓?'業主自讓':p.來源);fill('x_rent',p.叫價);fill('x_sqft',p.實用呎);fill('x_gross',p.建築呎);fill('x_rooms',p.房數);fill('x_toilets',p.廁所數);fill('x_age',p.樓齡);fill('x_facing',p.座向);fill('x_mgmt',p.管理費);fill('x_listed',p.刊登日期);fill('x_estate',p.屋苑);fill('x_block',p.座);fill('x_floor',p.樓層);
+    fill('x_src',p.業主自讓?'業主自讓':p.來源);fill('x_rent',p.叫價);fill('x_sqft',p.實用呎);fill('x_gross',p.建築呎);fill('x_rooms',p.房數);fill('x_toilets',p.廁所數);fill('x_age',p.樓齡);fill('x_facing',p.座向);fill('x_mgmt',p.管理費);fill('x_listed',p.刊登日期);fill('x_estate',p.屋苑);fill('x_block',p.座);fill('x_floor',p.樓層);fill('x_bldg',p.大廈);fill('x_addr',p.地址);fill('x_dist',p.分區);fill('x_area',p.地區);fill('x_sale',p.售價);
     if(p.標題&&!$('x_note').value)$('x_note').value='[網頁標題] '+p.標題+(p.描述?'\n'+p.描述.slice(0,300):'');
-    const got=['叫價','實用呎','房數','屋苑'].filter(k=>p[k]!=null);
-    $('importMsg').textContent=(p.warning?'⚠ '+p.warning+' ':'')+'已抓到：'+(got.join('、')||'無可用欄位，請人手填')+'。請核對。';
+    const got=['屋苑','大廈','座','地址','分區','叫價','售價','實用呎','房數','樓齡'].filter(k=>p[k]!=null);
+    $('importMsg').textContent=(p.warning?'⚠ '+p.warning+' ':'')+'已抓到：'+(got.join('、')||'無可用欄位，請人手填')+'。'+(p.叫價?'':'⚠ 未抓到月租，請人手填。')+'請核對。';
     suggestStack();
   }catch(e){$('importMsg').textContent='抓取失敗：'+e.message}
 }
@@ -449,7 +452,7 @@ function floorplanSearch(){const q=[$('x_estate').value,$('x_block').value,$('x_
 async function saveFlat(){
   const estate=$('x_estate').value.trim(); if(!estate){toast('請輸入屋苑');return}
   const id=$('x_id').value||tmpId(), isNew=!$('x_id').value;
-  const data={屋苑:estate,座:$('x_block').value.trim(),樓層:$('x_floor').value.trim(),單位:$('x_unit').value.trim().toUpperCase(),地區:$('x_area').value||null,階段:$('x_stage').value,來源:$('x_src').value||null,來源連結:$('x_url').value.trim()||null,
+  const data={屋苑:estate,座:$('x_block').value.trim(),大廈:$('x_bldg').value.trim(),地址:$('x_addr').value.trim(),分區:$('x_dist').value.trim(),售價:nn($('x_sale').value),樓層:$('x_floor').value.trim(),單位:$('x_unit').value.trim().toUpperCase(),地區:$('x_area').value||null,階段:$('x_stage').value,來源:$('x_src').value||null,來源連結:$('x_url').value.trim()||null,
     叫價:nn($('x_rent').value),實用呎:nn($('x_sqft').value),建築呎:nn($('x_gross').value),房數:nn($('x_rooms').value),廁所數:nn($('x_toilets').value),樓齡:nn($('x_age').value),座向:$('x_facing').value||null,
     管理費:nn($('x_mgmt').value),差餉季度:nn($('x_rates').value),搬運估算:nn($('x_move').value),包項目:chipsVal('incl'),租期:$('x_term').value.trim(),免租期日:nn($('x_free').value),
     交樓日:$('x_handover').value||null,刊登日期:$('x_listed').value||null,睇樓日期:$('x_visit').value||null,我評分:nn($('x_s1').value),太太評分:nn($('x_s2').value),
@@ -473,7 +476,7 @@ function renderDetail(){
   $('dTitle').textContent=flatTitle(f)||'（未命名）';
   const rooms=roomsOf(f.id), measured=rooms.filter(r=>r.長&&r.闊), tot=measured.reduce((a,r)=>a+r.長*r.闊/929.03,0);
   const m=monthly(f), over=cfg.budget&&m>n(cfg.budget);
-  const maps=(dest)=>dest?`<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(flatTitle(f))}&destination=${encodeURIComponent(dest)}&travelmode=transit" target="_blank">路線</a>`:'';
+  const maps=(dest)=>dest?`<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent((f.地址?f.地址+' ':'')+(f.屋苑||''))}&destination=${encodeURIComponent(dest)}&travelmode=transit" target="_blank">路線</a>`:'';
   $('t-info').innerHTML=`<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><select style="width:auto;font-size:14px;padding:6px 10px" onchange="quickStage('${f.id}',this.value)">${STAGES.map(s=>`<option ${f.階段===s?'selected':''}>${s}</option>`).join('')}</select>${f.url?`<a href="${esc(f.url)}" target="_blank">Notion ›</a>`:'<span class="tag warn">未同步</span>'}</div>
     <div class="kv">
@@ -481,7 +484,8 @@ function renderDetail(){
       <span>每月總支出</span><span class="num">${money(Math.round(m))}${cfg.budget?' / 預算 '+money(cfg.budget):''}<div class="bar"><i class="${over?'over':''}" style="width:${cfg.budget?Math.min(100,m/n(cfg.budget)*100):0}%"></i></div></span>
       <span>入伙總成本</span><span class="num">${money(Math.round(moveIn(f)))} <span class="sub">（按金2月＋上期＋佣半月＋搬運，推算）</span></span>
       <span>間隔</span><span>${f.房數!=null?f.房數+'房':'—'} ${f.廁所數!=null?f.廁所數+'廁':''}${f.實用呎?' · 實用 '+f.實用呎+'呎':''}${f.建築呎?' · 建築 '+f.建築呎:''}${measured.length?`<div class="sub">已量 ${measured.length} 間合共約 ${tot.toFixed(0)} 呎（不計牆身走廊）</div>`:''}</span>
-      <span>樓齡／座向</span><span>${f.樓齡?f.樓齡+'年':'—'} ${f.座向?'· '+f.座向:''}</span>
+      <span>位置</span><span>${[f.大廈,f.地址,f.分區,f.地區].filter(Boolean).map(esc).join(' · ')||'—'}${f.地址?` <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(f.地址+' '+(f.屋苑||''))}" target="_blank">地圖</a>`:''}</span>
+      <span>樓齡／座向</span><span>${f.樓齡?f.樓齡+'年':'—'} ${f.座向?'· '+f.座向:''}${f.售價?' · 售價參考 '+money(f.售價):''}</span>
       <span>包項目</span><span>${(f.包項目||[]).join('、')||'—'}</span>
       <span>租期</span><span>${esc(f.租期)||'—'}${f.免租期日?' · 免租 '+f.免租期日+'日':''}</span>
       <span>交樓日</span><span>${f.交樓日||'—'}${cfg.moveOut&&f.交樓日&&f.交樓日>cfg.moveOut?' <span class="tag bad">遲於退租日</span>':''}</span>
