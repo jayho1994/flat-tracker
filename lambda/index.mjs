@@ -55,7 +55,7 @@ export const SCHEMAS = {
     名稱: "title", 單位: "relation", 類型: "select", 長: "number", 闊: "number", 高: "number", 門闊: "number", 門高: "number",
     窗台深: "number", 冷氣位: "rich_text", 電掣位: "rich_text", 其他尺寸: "rich_text", 備註: "rich_text", 佈局: "rich_text",
   },
-  furniture: { 名稱: "title", 長: "number", 闊: "number", 高: "number", 所屬: "select", 狀態: "select", 可拆件: "checkbox", 備註: "rich_text" },
+  furniture: { 名稱: "title", 長: "number", 闊: "number", 高: "number", 所屬: "select", 狀態: "select", 可拆件: "checkbox", 開門方式: "select", 開門深度: "number", 備註: "rich_text" },
   contacts: { 姓名: "title", 角色: "select", 公司: "rich_text", 電話: "phone_number", WhatsApp: "url", 佣金: "rich_text", 評價: "select", 最後聯絡: "date", 備註: "rich_text" },
   offers: { 摘要: "title", 單位: "relation", 日期: "date", 類型: "select", 金額: "number", 要求項目: "multi_select", 狀態: "select", 誰跟進: "select", 經誰: "relation", 詳情: "rich_text" },
   checks: {
@@ -172,8 +172,10 @@ function sniffJSON(html) {
   }
   return out;
 }
+let out_src_note = "";
 export function parseListing(html, url) {
   const src = /28hse/i.test(url) ? "28Hse" : /centanet|中原/i.test(url) ? "中原" : /midland/i.test(url) ? "美聯" : /squarefoot/i.test(url) ? "Squarefoot" : /spacious/i.test(url) ? "Spacious" : "其他";
+  if (/super-pp\.com|propshare/i.test(url)) out_src_note = "代理分享頁";
   const out = { 來源連結: url, 來源: src, raw: {} };
   let durl = url; try { durl = decodeURIComponent(url); } catch { /* keep */ }
   const uPath = durl.replace(/^https?:\/\/[^/]+/, "");
@@ -205,7 +207,13 @@ export function parseListing(html, url) {
   const rawTitle = tt ? tt[1].replace(/\s+/g, " ").trim() : "";
   const h1 = h1s.find((x) => rawTitle.includes(x.split(/\s+/)[0]) && x.length > 3) || h1s.sort((a, b) => b.length - a.length)[0] || "";
   out.raw.title = tt ? tt[1].replace(/\s+/g, " ").trim() : null; out.raw.h1 = h1 || null;
+  const md = html.match(/name=["']description["'][^>]*content=["']([^"']+)/i) || html.match(/property=["']og:description["'][^>]*content=["']([^"']+)/i);
+  const metaDesc = md ? md[1].replace(/\s+/g, " ").trim() : "";
+  const AGENCY_TITLE = /有限公司|樓盤推介|物業推介|地產代理|Property Agency|推介$/;
   let title = (tt ? tt[1] : og ? og[1] : out.標題 || "").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  if (AGENCY_TITLE.test(title)) { out.raw.agencyTitle = title; title = ""; }
+  if (!title && metaDesc && /[\u4e00-\u9fa5]/.test(metaDesc) && metaDesc.length < 60) title = metaDesc.replace(/^(港島|九龍|新界|離島)\s+/, ""); // super-pp：「港島 太古城 太古城 23座(夏宮閣)」
+  out.raw.metaDesc = metaDesc || null;
   { const segs = title.split(/\s*[|｜]\s*|\s+-\s+/).map((x) => x.replace(/\s*(買樓|租樓|租屋|出租|放售|出售|樓盤|物業|放盤|詳細資料)\s*/g, " ").trim()).filter((x) => x && !/中原|美聯|28Hse|香港屋網|Squarefoot|Spacious|Centaline|Midland/i.test(x));
     title = segs.sort((a, b) => b.length - a.length)[0] || ""; }
   if (title) out.標題 = title;
@@ -213,8 +221,9 @@ export function parseListing(html, url) {
   if (title) {
     const toks = title.split(/\s+/).filter((x, i, a) => x && a.indexOf(x) === i);
     const blk = title.match(/(\d{1,3})\s*座/); if (blk) out.座 = blk[1] + "座";
-    const rest = toks.filter((x) => !/座\)?$/.test(x) && !/^\(/.test(x) && !JUNK_ESTATE.test(x) && !/^(高|中|低)層$|^\d+(房|廁|浴|衛|呎)|呎$|^[\d,$#]+$|^#|^(開揚|海景|山景|靚裝|連車位|全新|罕有|租盤|售盤|放盤|詳細資料|物業資料|樓盤資料|出租|出售)/.test(x));
-    if (rest.length) { out.屋苑 = rest[0].replace(/[()（）]/g, ""); if (rest.length > 1) out.大廈 = rest.slice(1).join(" ").replace(/[()（）]/g, "").trim(); }
+    const paren = title.match(/\d{1,3}座\s*[（(]([^()（）]{2,12})[)）]/); if (paren) out.大廈 = paren[1].trim();
+    const rest = toks.filter((x) => !/座/.test(x) && !/^\(/.test(x) && !JUNK_ESTATE.test(x) && !/^(高|中|低)層$|^\d+(房|廁|浴|衛|呎)|呎$|^[\d,$#]+$|^#|^(開揚|海景|山景|靚裝|連車位|全新|罕有|租盤|售盤|放盤|詳細資料|物業資料|樓盤資料|出租|出售)/.test(x));
+    if (rest.length) { out.屋苑 = rest[0].replace(/[()（）]/g, ""); if (rest.length > 1 && !out.大廈) out.大廈 = rest.slice(1).join(" ").replace(/[()（）]/g, "").trim(); }
   }
   // 頁內 JSON 優先覆蓋（較標題可靠）；h1 作屋苑後備
   // JSON 的屋苑只在「出現於標題或 h1」時採用（避免抓到頁底推介樓盤）；否則以標題／h1 為準
@@ -247,10 +256,10 @@ export function parseListing(html, url) {
     if (!out.叫價 && freq.size) out.叫價 = out.raw.rentCandidates[0][0]; }
   if (!out.售價 && jsonTrust && sj.sale && Number(sj.sale) > 1000000) out.售價 = Number(sj.sale);
   if (ldPrice != null) { if (!out.叫價 && ldPrice >= 3000 && ldPrice <= 500000) out.叫價 = ldPrice; else if (!out.售價 && ldPrice > 1000000) out.售價 = ldPrice; }
-  if (!out.實用呎) { const m = t.match(/實用[^\d]{0,10}([\d,]{2,5})\s*(?:呎|平方呎|sq)/i); if (m) out.實用呎 = toNum(m[1]); }
-  { const m = t.match(/建築[^\d]{0,10}([\d,]{2,5})\s*(?:呎|平方呎|sq)/i); if (m) out.建築呎 = toNum(m[1]); }
+  if (!out.實用呎) { const m = t.match(/實(?:用|呎)[^\d]{0,10}([\d,]{2,5})\s*(?:呎|ft|平方呎|sq)/i); if (m) out.實用呎 = toNum(m[1]); }
+  { const m = t.match(/建(?:築|呎)[^\d]{0,10}([\d,]{2,5})\s*(?:呎|ft|平方呎|sq)/i); if (m) out.建築呎 = toNum(m[1]); }
   if (!out.房數) { const m = t.match(/(\d)\s*房(?!價|屋)/); if (m) out.房數 = toNum(m[1]); }
-  if (!out.廁所數) { const m = t.match(/(\d)\s*(?:廁|浴|衛)/); if (m) out.廁所數 = toNum(m[1]); }
+  if (!out.廁所數) { const m = t.match(/(\d(?:\.\d)?)\s*廁/) || t.match(/(\d(?:\.\d)?)\s*(?:浴|衛)/); if (m) out.廁所數 = Number(m[1]); }
   { const m = t.match(/樓齡[^\d]{0,6}(\d{1,2})/); if (m) out.樓齡 = toNum(m[1]); }
   { const m = t.match(/座向[^\u4e00-\u9fa5]{0,4}(東南|西南|東北|西北|東|南|西|北)/); if (m) out.座向 = m[1]; }
   { const m = t.match(/管理費[^\d]{0,10}\$?\s*([\d,]{3,6})/); if (m) out.管理費 = toNum(m[1]); }
@@ -260,9 +269,15 @@ export function parseListing(html, url) {
   { const m = t.match(/實用率[^\d]{0,6}(\d{2})\s*%/); if (m) out.實用率 = toNum(m[1]); }
   if (!out.座) { const m = t.match(/(\d{1,3})\s*座/); if (m) out.座 = m[1] + "座"; }
   if (!out.樓層) { const m = t.match(/(高|中|低)層/); if (m) out.樓層 = m[1] + "層"; }
+  if (!out.樓層) { const m = t.match(/(?:^|\s|\))(\d{1,2})\s*樓(?!齡|盤|價|宇|層)/); if (m) out.樓層 = m[1]; }
+  if (!out.大廈) { const m = t.match(/\d{1,3}座\s*[（(]([^()（）]{2,12})[)）]/); if (m) out.大廈 = m[1].trim(); }
+  if (!out.地區) { const m = t.match(/(?<![\u4e00-\u9fa5])(港島|九龍|新界|離島)(?![\u4e00-\u9fa5])/); if (m) out.地區 = m[1]; }
+  if (!out.刊登日期) { const m = t.match(/(?:盤源編號|物業編號)[^\d]{0,20}[A-Z]?\d+[^\d]{0,20}(\d{2})\/(\d{2})\/(\d{4})/); if (m) out.刊登日期 = `${m[3]}-${m[2]}-${m[1]}`; }
+  { const lic = html.match(/([\u4e00-\u9fa5]{2,4}|[A-Z][a-z]+ [A-Z][a-z]+)\s*(?:<[^>]+>\s*)*([SEC]-\d{6})/); const tel = html.match(/tel:\+?(?:852)?(\d{8})/); const co = t.match(/([\u4e00-\u9fa5A-Za-z]{2,20}(?:物業有限公司|地產有限公司|有限公司|地產代理|物業代理))/);
+    if (lic || tel) out.代理 = { 姓名: lic ? lic[1] : "", 牌照: lic ? lic[2] : "", 電話: tel ? tel[1] : "", 公司: co ? co[1] : "" }; }
   if (!out.單位) { const m = t.match(/(?:單位|室)[:：]?\s*([A-Z]|\d{1,3})\b|\b(\d{1,3}|[A-Z])室/); if (m) out.單位 = (m[1] || m[2]).toUpperCase(); }
-  if (!out.地址) { const m = t.match(/([\u4e00-\u9fa5]{1,10}(?:道|路|街|里|徑|巷|坊|圍|灣)\s*\d{1,4}\s*號?(?:[A-Z]|-\d+號?)?)/); if (m) out.地址 = m[1].replace(/\s+/g, "").replace(/^(位於|地址|座落|坐落)/, ""); }
-  if (out.地址) { for (const names of Object.values(DISTRICTS)) for (const nme of names) if (out.地址.startsWith(nme) && out.地址.length > nme.length + 3) { out.地址 = out.地址.slice(nme.length); } }
+  if (!out.地址) { const m = t.match(/(?:街道|地址)[:：]?\s*([\u4e00-\u9fa5]{1,12}(?:道|路|街|里|徑|巷|坊|圍|灣)\s*\d{1,4}\s*號?(?:[A-Z]|-\d+號?)?)/) || t.match(/([\u4e00-\u9fa5]{1,10}(?:道|路|街|里|徑|巷|坊|圍|灣)\s*\d{1,4}\s*號?(?:[A-Z]|-\d+號?)?)/); if (m) out.地址 = m[1].replace(/\s+/g, "").replace(/^(位於|地址|座落|坐落)/, ""); }
+  if (out.地址) { for (const names of Object.values(DISTRICTS)) for (const nme of names) { const rest = out.地址.slice(nme.length); if (out.地址.startsWith(nme) && rest.length > 3 && !/^(城|道|路|街|里|徑|巷|坊|灣|圍|園|山|新村|村|邨|苑|台|閣|中心|廣場)/.test(rest)) out.地址 = rest; } }
   // 分區：優先在標題／地址附近出現者，否則全文最早出現者
   const estateStr = (out.屋苑 || "") + (out.大廈 || "");
   const head = [out.標題 || "", out.地址 || ""].join(" ");
@@ -281,7 +296,7 @@ export function parseListing(html, url) {
   }
   if (out.分區JSON) { for (const [region, names] of Object.entries(DISTRICTS)) { const hit = names.find((n) => out.分區JSON.includes(n)); if (hit) { best = { nme: hit, region, score: -1 }; break; } } if (!best || best.score !== -1) out.分區 = out.分區JSON; }
   if (best) { out.分區 = best.nme; out.地區 = best.region; }
-  delete out.分區JSON;
+  delete out.分區JSON; if (out_src_note) out.raw.note = out_src_note;
   return out;
 }
 async function importListing(url) {
@@ -388,6 +403,93 @@ async function compareFlats(body) {
   return { comparison: res.text, truncated: res.truncated, usage: res.usage };
 }
 
+
+/* ---------- AR：USDZ 生成（iOS AR Quick Look）。GET /ar?d=<base64url JSON>，公開端點，只輸出方塊 ---------- */
+// JSON: { items:[{n,w,d,h,x,z,rot,c}], room:{l,w} }  單位 cm；x,z 為平面圖座標（左上角原點），rot 0/90/180/270
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(buf) { let c = 0xffffffff; for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function zipStore(files) { // files: [{name, data:Buffer}] → 無壓縮、64-byte 對齊（USDZ 規格）
+  const parts = []; const central = []; let offset = 0;
+  for (const f of files) {
+    const name = Buffer.from(f.name, "utf8"); const headerLen = 30 + name.length; const pad = (64 - ((offset + headerLen) % 64)) % 64; const extra = Buffer.alloc(pad); if (pad >= 4) { extra.writeUInt16LE(0x1986, 0); extra.writeUInt16LE(pad - 4, 2); }
+    const crc = crc32(f.data); const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0, 6); lh.writeUInt16LE(0, 8); lh.writeUInt16LE(0, 10); lh.writeUInt16LE(0, 12); lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(f.data.length, 18); lh.writeUInt32LE(f.data.length, 22); lh.writeUInt16LE(name.length, 26); lh.writeUInt16LE(pad, 28);
+    parts.push(lh, name, extra, f.data);
+    const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0, 8); ch.writeUInt16LE(0, 10); ch.writeUInt16LE(0, 12); ch.writeUInt16LE(0, 14); ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(f.data.length, 20); ch.writeUInt32LE(f.data.length, 24); ch.writeUInt16LE(name.length, 28); ch.writeUInt16LE(0, 30); ch.writeUInt16LE(0, 32); ch.writeUInt16LE(0, 34); ch.writeUInt16LE(0, 36); ch.writeUInt32LE(0, 38); ch.writeUInt32LE(offset, 42);
+    central.push(ch, name); offset += headerLen + pad + f.data.length;
+  }
+  const cd = Buffer.concat(central); const eocd = Buffer.alloc(22); eocd.writeUInt32LE(0x06054b50, 0); eocd.writeUInt16LE(0, 4); eocd.writeUInt16LE(0, 6); eocd.writeUInt16LE(files.length, 8); eocd.writeUInt16LE(files.length, 10); eocd.writeUInt32LE(cd.length, 12); eocd.writeUInt32LE(offset, 16); eocd.writeUInt16LE(0, 20);
+  return Buffer.concat([...parts, cd, eocd]);
+}
+const PALETTE = [[0.55, 0.42, 0.12], [0.18, 0.35, 0.62], [0.36, 0.55, 0.32], [0.62, 0.30, 0.25], [0.45, 0.40, 0.55], [0.30, 0.50, 0.55], [0.60, 0.50, 0.35], [0.40, 0.40, 0.40]];
+export function buildUSDA(spec) {
+  const items = (spec.items || []).slice(0, 40); const room = spec.room || null;
+  const cm = (v) => (Number(v) || 0) / 100;
+  const box = (name, w, h, d, tx, ty, tz, rotY, rgb, opacity) => {
+    const hw = w / 2, hh = h / 2, hd = d / 2; const safe = name.replace(/[^A-Za-z0-9_]/g, "_").replace(/^(\d)/, "_$1") || "item";
+    return `
+    def Xform "${safe}"
+    {
+        double3 xformOp:translate = (${tx.toFixed(4)}, ${ty.toFixed(4)}, ${tz.toFixed(4)})
+        float3 xformOp:rotateXYZ = (0, ${rotY}, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+        def Mesh "geom"
+        {
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 1, 2, 3, 4, 7, 6, 5, 0, 4, 5, 1, 1, 5, 6, 2, 2, 6, 7, 3, 3, 7, 4, 0]
+            point3f[] points = [(${-hw}, ${-hh}, ${hd}), (${hw}, ${-hh}, ${hd}), (${hw}, ${hh}, ${hd}), (${-hw}, ${hh}, ${hd}), (${-hw}, ${-hh}, ${-hd}), (${hw}, ${-hh}, ${-hd}), (${hw}, ${hh}, ${-hd}), (${-hw}, ${hh}, ${-hd})]
+            normal3f[] normals = [(0,0,1),(0,0,1),(0,0,1),(0,0,1),(0,0,-1),(0,0,-1),(0,0,-1),(0,0,-1)] (interpolation = "vertex")
+            uniform token subdivisionScheme = "none"
+            rel material:binding = </Root/Materials/${safe}_mat>
+        }
+    }`;
+  };
+  const mats = [];
+  let body = "";
+  const rl = room && room.l ? cm(room.l) : 0, rw = room && room.w ? cm(room.w) : 0;
+  items.forEach((it, i) => {
+    const w = cm(it.w), d = cm(it.d), h = cm(it.h) || 0.02; const rgb = PALETTE[i % PALETTE.length];
+    const rot = Number(it.rot) || 0; const fw = rot % 180 ? d : w, fd = rot % 180 ? w : d;   // 平面圖上的佔位
+    let tx, tz;
+    if (room && it.x != null) { tx = cm(it.x) + fw / 2 - rl / 2; tz = cm(it.z) + fd / 2 - rw / 2; } else { tx = i * 1.2; tz = 0; }
+    body += box(String(it.n || "item" + i), w, h, d, tx, h / 2, tz, rot % 180 ? 90 : 0, rgb, 1);
+    mats.push(`
+        def Material "${String(it.n || "item" + i).replace(/[^A-Za-z0-9_]/g, "_").replace(/^(\d)/, "_$1") || "item"}_mat"
+        {
+            token outputs:surface.connect = </Root/Materials/${String(it.n || "item" + i).replace(/[^A-Za-z0-9_]/g, "_").replace(/^(\d)/, "_$1") || "item"}_mat/pbr.outputs:surface>
+            def Shader "pbr"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (${rgb[0]}, ${rgb[1]}, ${rgb[2]})
+                float inputs:roughness = 0.7
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+        }`);
+  });
+  if (room && rl && rw) { // 地面薄板（半透明示意）
+    body += box("floor", rl, 0.005, rw, 0, 0.0025, 0, 0, [0.9, 0.9, 0.85], 1);
+    mats.push(`
+        def Material "floor_mat" { token outputs:surface.connect = </Root/Materials/floor_mat/pbr.outputs:surface>
+            def Shader "pbr" { uniform token info:id = "UsdPreviewSurface"  color3f inputs:diffuseColor = (0.92, 0.9, 0.85)  float inputs:opacity = 0.5  float inputs:roughness = 0.9  token outputs:surface } }`);
+  }
+  return `#usda 1.0
+(
+    customLayerData = { string creator = "flat-tracker" }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{${body}
+    def Scope "Materials"
+    {${mats.join("")}
+    }
+}
+`;
+}
+function buildUSDZ(spec) { return zipStore([{ name: "model.usda", data: Buffer.from(buildUSDA(spec), "utf8") }]); }
+
 /* ---------- Telegram（錯誤通知，選填） ---------- */
 async function tg(msg) {
   const { TELEGRAM_BOT_TOKEN: t, TELEGRAM_CHAT_ID: c } = process.env; if (!t || !c) return;
@@ -400,6 +502,14 @@ const reply = (status, body) => ({ statusCode: status, headers: CORS, body: JSON
 export async function handler(event) {
   const method = event.requestContext?.http?.method || event.httpMethod || "GET";
   if (method === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
+  const rawPath0 = (event.rawPath || event.path || "/").replace(/\/{2,}/g, "/");
+  if (rawPath0.startsWith("/ar") && method === "GET") {           // 公開：AR Quick Look 無法附 header；只回傳幾何方塊
+    try {
+      const d = (event.queryStringParameters || {}).d || ""; const spec = JSON.parse(Buffer.from(d.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
+      const usdz = buildUSDZ(spec);
+      return { statusCode: 200, headers: { "Content-Type": "model/vnd.usdz+zip", "Content-Disposition": 'inline; filename="furniture.usdz"', "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" }, body: usdz.toString("base64"), isBase64Encoded: true };
+    } catch (e) { return reply(400, { error: "bad ar spec: " + e.message }); }
+  }
   const key = event.headers?.["x-app-key"] || event.headers?.["X-App-Key"] || "";
   if (!process.env.APP_KEY || key !== process.env.APP_KEY) return reply(401, { error: "unauthorized" });
 

@@ -4,86 +4,95 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="睇樓">
-<meta name="theme-color" content="#f0c419">
+<meta name="theme-color" content="#f6f3ec">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>睇樓資料庫</title>
 <style>
-  :root{--ink:#1a1a1a;--line:#d9d4c7;--soft:#f3f0e8;--tape:#f0c419;--tape-dark:#c99d00;--ok:#1f7a3a;--bad:#b3261e;--mute:#6b6760;--blue:#0b57d0;--r:10px}
+  :root{--ink:#1c1b18;--ink2:#4a4741;--mute:#7a7569;--paper:#f6f3ec;--card:#fffdf8;--line:#cfc7b6;--line2:#e6e0d2;--accent:#8a6d1e;--accent-2:#b8963a;--accent-soft:#f1e8cf;--ok:#2f6b3a;--bad:#a3322a;--warn:#8a6d1e;--blue:#2f4f7a;--r:12px;
+    --btn-grad:linear-gradient(180deg,#fffefb 0%,#ece7da 100%);--btn-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -1px 0 rgba(0,0,0,.05) inset,0 2px 3px rgba(28,27,24,.14),0 6px 12px -6px rgba(28,27,24,.18);--btn-active:0 2px 4px rgba(0,0,0,.22) inset,0 1px 0 rgba(255,255,255,.4)}
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
-  body{font-family:-apple-system,"PingFang TC","Noto Sans TC","Helvetica Neue",Arial,sans-serif;color:var(--ink);background:#fff;font-size:16px;line-height:1.45;padding-bottom:calc(74px + env(safe-area-inset-bottom))}
-  header{position:sticky;top:0;z-index:5;background:var(--tape);padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--ink);gap:8px}
-  header h1{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  header .st{font-size:12px;color:#3d3300;white-space:nowrap}
+  body{font-family:-apple-system,"PingFang TC","Noto Sans TC","Helvetica Neue",Arial,sans-serif;color:var(--ink);font-size:16px;line-height:1.5;padding-bottom:calc(84px + env(safe-area-inset-bottom));
+    background-color:var(--paper);background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%231c1b18' stroke-opacity='.055' stroke-width='1'%3E%3Cpath d='M0 48h96M48 0v96'/%3E%3C/g%3E%3Cg font-family='Georgia,Times New Roman,serif' font-size='30' fill='%231c1b18' fill-opacity='.045' font-style='italic'%3E%3Ctext x='14' y='42' transform='rotate(-18 24 32)'%3EK%3C/text%3E%3Ctext x='50' y='78' transform='rotate(-18 60 68)'%3EJ%3C/text%3E%3C/g%3E%3C/svg%3E");background-size:96px 96px;background-attachment:fixed}
+  header{position:sticky;top:0;z-index:5;background:rgba(246,243,236,.92);backdrop-filter:saturate(1.2) blur(8px);-webkit-backdrop-filter:saturate(1.2) blur(8px);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);gap:8px}
+  header h1{font-family:Georgia,"Songti TC","Noto Serif TC",serif;font-weight:600;font-size:20px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  header h1 span{font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:0;color:var(--mute);font-weight:600;margin-left:6px}
+  header .st{font-size:12px;color:var(--ink2);white-space:nowrap;letter-spacing:.02em}
   header .st.err{color:var(--bad);font-weight:700}
-  main{padding:12px 12px 20px;max-width:680px;margin:0 auto}
+  main{padding:14px 14px 20px;max-width:680px;margin:0 auto}
   .view{display:none}.view.on{display:block}
-  h2{font-size:17px;margin:14px 0 8px}
-  h3{font-size:16px}
-  .hint{font-size:13px;color:var(--mute);margin:4px 0 10px;line-height:1.5}
-  input,textarea,select{width:100%;font:inherit;font-size:17px;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink)}
-  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ink)}
-  textarea{min-height:60px;resize:vertical}
-  label.f{display:block;font-size:12px;color:var(--mute);margin-bottom:3px}
-  button{font:inherit;font-size:15px;font-weight:600;padding:11px 12px;border-radius:var(--r);border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap}
-  button.primary{background:var(--ink);color:var(--tape)}
-  button.tape{background:var(--tape);border-color:var(--tape-dark)}
-  button.danger{border-color:var(--bad);color:var(--bad)}
-  button.sm{font-size:13px;padding:7px 10px}
-  button.link{border:none;background:none;padding:6px 0;color:var(--blue);text-decoration:underline;font-weight:600}
-  button:active{transform:translateY(1px)}button:disabled{opacity:.45}
-  .card{border:1.5px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px;background:#fff}
-  .card.tap{cursor:pointer}
+  h2{font-family:Georgia,"Songti TC","Noto Serif TC",serif;font-weight:600;font-size:17px;letter-spacing:.03em;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line2)}
+  h3{font-size:16px;font-weight:700}
+  .hint{font-size:13px;color:var(--mute);margin:4px 0 10px;line-height:1.55}
+  input,textarea,select{width:100%;font:inherit;font-size:17px;padding:12px 13px;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(28,27,24,.06) inset;min-height:48px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea{min-height:64px;resize:vertical}
+  label.f{display:block;font-size:12px;color:var(--mute);margin:0 0 4px 2px;letter-spacing:.04em}
+  button{font:inherit;font-size:15px;font-weight:600;min-height:44px;padding:10px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--btn-grad);color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;box-shadow:var(--btn-shadow);transition:transform .06s,box-shadow .06s;letter-spacing:.02em}
+  button:active{transform:translateY(1px);box-shadow:var(--btn-active)}
+  button.primary{background:linear-gradient(180deg,#34322d 0%,#1c1b18 100%);color:#efe2b8;border-color:#1c1b18;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 2px 4px rgba(0,0,0,.28),0 8px 14px -8px rgba(0,0,0,.5)}
+  button.primary:active{box-shadow:0 3px 6px rgba(0,0,0,.5) inset}
+  button.tape{background:linear-gradient(180deg,#d9b95a 0%,#b8963a 100%);border-color:#8a6d1e;color:#1c1b18}
+  button.danger{color:var(--bad);border-color:#d3a39e}
+  button.sm{font-size:13px;min-height:36px;padding:6px 11px}
+  button.link{border:none;background:none;box-shadow:none;padding:6px 0;color:var(--blue);text-decoration:underline;font-weight:600;min-height:0}
+  button.link:active{transform:none;box-shadow:none}
+  button:disabled{opacity:.45}
+  .card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;background:var(--card);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 4px 10px -6px rgba(28,27,24,.25)}
+  .card.tap{cursor:pointer}.card.tap:active{background:#fbf8f0}
   .card h3{display:flex;justify-content:space-between;align-items:center;gap:8px}
   .sub{font-size:14px;color:var(--mute);margin-top:3px}
   .dims{font-size:15px;font-variant-numeric:tabular-nums;margin-top:4px}.dims b{font-weight:700}.dims .ft{color:var(--mute);font-size:13px;margin-left:5px}
-  .empty{padding:22px 12px;text-align:center;color:var(--mute);border:1.5px dashed var(--line);border-radius:var(--r);font-size:14px}
-  .tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;display:inline-block}
-  .tag.ok{background:#e3f4e8;color:var(--ok)}.tag.bad{background:#fbe6e4;color:var(--bad)}.tag.warn{background:#fff3cf;color:#7a5b00}.tag.gray{background:var(--soft);color:var(--mute)}.tag.blue{background:#e6eefc;color:#1b4fb3}
-  .s-網上見到{background:var(--soft);color:var(--mute)}.s-已約睇{background:#e6eefc;color:#1b4fb3}.s-已睇{background:#efe6fb;color:#5b2ea6}.s-考慮中{background:#fff3cf;color:#7a5b00}.s-已出價,.s-談判中{background:#fde8d2;color:#a24f00}.s-已簽約{background:#e3f4e8;color:var(--ok)}.s-淘汰{background:#fbe6e4;color:var(--bad)}
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:#fff;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
-  nav button{flex:1;border:none;border-radius:0;background:#fff;font-size:12px;padding:11px 2px;font-weight:600;color:var(--mute)}
-  nav button.on{color:var(--ink);background:var(--soft);box-shadow:inset 0 3px 0 var(--tape)}
-  .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:flex-end}
+  .empty{padding:22px 12px;text-align:center;color:var(--mute);border:1px dashed var(--line);border-radius:var(--r);font-size:14px;background:rgba(255,255,255,.5)}
+  .tag{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;display:inline-block;letter-spacing:.02em;border:1px solid transparent}
+  .tag.ok{background:#e5efe6;color:var(--ok);border-color:#c5dac8}.tag.bad{background:#f5e3e1;color:var(--bad);border-color:#e6c2be}.tag.warn{background:var(--accent-soft);color:var(--warn);border-color:#e3d3a5}.tag.gray{background:#eeeae1;color:var(--mute)}.tag.blue{background:#e6ecf4;color:var(--blue)}
+  .s-網上見到{background:#eeeae1;color:var(--mute)}.s-已約睇{background:#e6ecf4;color:var(--blue)}.s-已睇{background:#ece6f2;color:#5b3f8a}.s-考慮中{background:var(--accent-soft);color:var(--warn)}.s-已出價,.s-談判中{background:#f6e6d3;color:#8a4f12}.s-已簽約{background:#e5efe6;color:var(--ok)}.s-淘汰{background:#f5e3e1;color:var(--bad)}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:rgba(246,243,236,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px}
+  nav button{flex:1;border:none;border-radius:10px;background:transparent;box-shadow:none;font-size:12px;padding:10px 2px;min-height:52px;font-weight:600;color:var(--mute);letter-spacing:.03em}
+  nav button.on{color:var(--ink);background:var(--btn-grad);border:1px solid var(--line);box-shadow:var(--btn-shadow)}
+  nav button:active{transform:none}
+  .sheet{position:fixed;inset:0;z-index:20;background:rgba(28,27,24,.45);display:none;align-items:flex-end;backdrop-filter:blur(2px)}
   .sheet.on{display:flex}
-  .panel{background:#fff;width:100%;max-height:calc(100vh - env(safe-area-inset-top) - 28px);overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
-  .panel h2{margin-top:0}.panel .topbar{margin-bottom:12px}
-  .stack{display:flex;flex-direction:column;gap:8px}
+  .panel{background:var(--paper);width:100%;max-height:calc(100vh - env(safe-area-inset-top) - 28px);overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,.25)}
+  .panel h2{margin-top:0;border:none}.panel .topbar{margin-bottom:12px;position:sticky;top:-14px;background:var(--paper);padding:14px 0 8px;z-index:2;border-bottom:1px solid var(--line2)}
+  .panel .actions{position:sticky;bottom:-16px;background:linear-gradient(180deg,rgba(246,243,236,0),var(--paper) 30%);padding:12px 0 4px;margin-top:6px;z-index:2}
+  .stack{display:flex;flex-direction:column;gap:10px}
   .split{display:flex;gap:8px}.split>*{flex:1;min-width:0}
-  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90vw;text-align:center}
+  .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--ink);color:#efe2b8;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90vw;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,.3)}
   .toast.on{opacity:1}
   .mono{font-family:ui-monospace,Menlo,monospace;font-size:13px}
-  .suggest{background:#fff8dc;border:1.5px solid var(--tape-dark);border-radius:var(--r);padding:10px;font-size:14px;margin-bottom:8px}
-  .topbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}.topbar h2{margin:0;flex:1;font-size:16px}
-  .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:14px;margin-top:6px}.kv span:first-child{color:var(--mute)}
+  .suggest{background:var(--accent-soft);border:1px solid #e3d3a5;border-radius:var(--r);padding:10px 12px;font-size:14px;margin-bottom:8px}
+  .topbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}.topbar h2{margin:0;flex:1;font-size:17px;border:none;padding:0}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin-top:8px}.kv span:first-child{color:var(--mute);letter-spacing:.03em}
   a{color:var(--blue)}
-  .tabs{display:flex;gap:4px;overflow-x:auto;margin:8px 0 12px;-webkit-overflow-scrolling:touch}
-  .tabs button{flex:0 0 auto;font-size:13px;padding:7px 12px;border-radius:999px;border-color:var(--line);color:var(--mute)}
-  .tabs button.on{background:var(--ink);color:var(--tape);border-color:var(--ink)}
+  .tabs{display:flex;gap:6px;overflow-x:auto;margin:8px 0 14px;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .tabs button{flex:0 0 auto;font-size:13px;min-height:36px;padding:6px 14px;border-radius:999px}
+  .tabs button.on{background:linear-gradient(180deg,#34322d,#1c1b18);color:#efe2b8;border-color:#1c1b18}
   .tab{display:none}.tab.on{display:block}
   .board{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
-  .col{flex:0 0 78vw;max-width:300px;background:var(--soft);border-radius:var(--r);padding:8px}
-  .col h3{font-size:14px;margin:4px 4px 8px;display:flex;justify-content:space-between}
+  .col{flex:0 0 78vw;max-width:300px;background:rgba(255,255,255,.45);border:1px solid var(--line2);border-radius:var(--r);padding:8px}
+  .col h3{font-family:Georgia,"Songti TC",serif;font-weight:600;font-size:14px;margin:4px 4px 8px;display:flex;justify-content:space-between;letter-spacing:.04em}
   .col .card{margin-bottom:8px;padding:10px}
-  .chk{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--soft);gap:8px}
-  .chk:last-child{border-bottom:none}
-  .seg{display:flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
-  .seg button{flex:1;border:none;border-radius:0;padding:6px 10px;font-size:14px;background:#fff;color:var(--mute)}
-  .seg button.y{background:#e3f4e8;color:var(--ok)}.seg button.n{background:#fbe6e4;color:var(--bad)}.seg button.q{background:var(--soft);color:var(--mute)}
-  .fit{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--soft);gap:8px}.fit:last-child{border-bottom:none}.fit .n{font-weight:600}.fit .d{font-size:13px;color:var(--mute)}
-  .bar{height:10px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--ok)}.bar i.over{background:var(--bad)}
-  .stars{letter-spacing:2px;color:#c99d00}
-  .ai{white-space:pre-wrap;font-size:14px;line-height:1.55;background:#fafaf7;border:1.5px solid var(--line);border-radius:var(--r);padding:12px}
-  .chip{display:inline-block;font-size:12px;padding:2px 7px;border-radius:6px;background:var(--soft);color:var(--mute);margin:2px 3px 0 0}
+  .chk{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);gap:8px}.chk:last-child{border-bottom:none}
+  .seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.06) inset}
+  .seg button{flex:1;border:none;border-radius:0;padding:6px 11px;min-height:36px;font-size:14px;background:transparent;box-shadow:none;color:var(--mute)}
+  .seg button:active{transform:none}
+  .seg button.y{background:#e5efe6;color:var(--ok)}.seg button.n{background:#f5e3e1;color:var(--bad)}.seg button.q{background:#eeeae1;color:var(--mute)}
+  .fit{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2);gap:8px}.fit:last-child{border-bottom:none}.fit .n{font-weight:600}.fit .d{font-size:13px;color:var(--mute)}
+  .bar{height:8px;background:#e8e3d6;border-radius:999px;overflow:hidden;margin-top:6px;box-shadow:0 1px 2px rgba(0,0,0,.08) inset}.bar i{display:block;height:100%;background:linear-gradient(90deg,#5c8c62,var(--ok))}.bar i.over{background:linear-gradient(90deg,#c9584f,var(--bad))}
+  .stars{letter-spacing:2px;color:var(--accent-2)}
+  .ai{white-space:pre-wrap;font-size:14px;line-height:1.6;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+  .chip{display:inline-block;font-size:12px;padding:3px 9px;border-radius:8px;background:#eeeae1;color:var(--ink2);margin:2px 4px 0 0;border:1px solid var(--line2)}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .num{font-variant-numeric:tabular-nums}
+  .grp{margin:6px 0 4px;font-size:12px;color:var(--mute);letter-spacing:.06em}
   @media (min-width:600px){.col{flex:0 0 240px}}
 </style>
 </head>
 <body>
-<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v2.6</span></h1><span class="st" id="syncSt">—</span></header>
+<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v3.0</span></h1><span class="st" id="syncSt">—</span></header>
 
 <main>
   <!-- 看板 -->
@@ -119,7 +128,8 @@
     <div id="t-fit" class="tab"><label class="f">選擇房間</label><select id="fitRoom" onchange="renderFit()"></select><p class="hint">判準：地面 = 傢俬長×闊可平放或轉90°放入房間長×闊；入門 = 三邊中最細兩邊 ≤ 門闊×門高（門高留空當 200）。不計轉角、走廊、樓底。「不搬」傢俬不計。</p><div id="fitList" class="card"></div></div>
     <div id="t-plan" class="tab">
       <div class="split"><select id="planRoom" onchange="planLoad()"></select><button class="sm" onclick="planDoorWall()">門位 ↻</button></div>
-      <p class="hint">按下方傢俬加入房間；拖動移位、點一下選取後可「旋轉」「移除」。紅色＝超出牆身或重疊。比例準確（cm）。儲存後兩部電話同步。</p>
+      <p class="hint">拖動移位；點選後可旋轉／移除。紅＝出牆或重疊；虛線＝開門／拉抽屜佔用區；門前走動空間以成年人計（60 側身、90 舒適、120 兩人）。</p>
+      <div class="split" style="margin-bottom:8px"><button class="sm tape" onclick="planAddRoomSet()">一鍵放入此房傢俬</button><button class="sm" onclick="planAuto()">自動靠牆排位</button><button class="sm" onclick="planAR()">AR 預視</button></div>
       <div id="planChips" style="margin-bottom:8px"></div>
       <canvas id="planCanvas" style="width:100%;border:1.5px solid var(--line);border-radius:10px;touch-action:none;background:#fff"></canvas>
       <div id="planInfo" class="sub" style="margin-top:6px"></div>
@@ -180,7 +190,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v2.6 · 2026-09-09</p>
+    <p class="hint" style="margin-top:12px">v3.0 · 2026-09-09</p>
   </section>
 </main>
 
@@ -218,7 +228,7 @@
     <div><label class="f">標籤</label><div id="x_tags"></div></div>
     <div><label class="f">代理</label><select id="x_agent"><option value="">—</option></select></div>
     <div><label class="f">備註</label><textarea id="x_note" placeholder="景觀、樓層、業主情況、代理講過的話…"></textarea></div>
-    <div class="split"><button class="primary" onclick="saveFlat()">儲存單位</button><button onclick="closeSheet('shFlat')">取消</button><button class="danger" id="x_del" onclick="delFlat()" style="display:none">刪除</button></div>
+    <div class="split actions"><button class="primary" onclick="saveFlat()">儲存單位</button><button onclick="closeSheet('shFlat')">取消</button><button class="danger" id="x_del" onclick="delFlat()" style="display:none">刪除</button></div>
     <button class="link" onclick="floorplanSearch()">🔎 Google 搜尋此單位則圖</button>
   </div>
 </div></div>
@@ -233,7 +243,7 @@
     <div class="split"><div><label class="f">冷氣位</label><input id="r_ac" placeholder="窗口機位 / 分體"></div><div><label class="f">電掣位</label><input id="r_sock" placeholder="4 個 / 床頭無"></div></div>
     <div><label class="f">其他尺寸（每行：名稱 數值）</label><textarea id="r_extra" placeholder="走廊闊 85&#10;衣櫃位闊 120"></textarea></div>
     <div><label class="f">備註</label><textarea id="r_note"></textarea></div>
-    <div class="split"><button class="primary" onclick="saveRoom()">儲存房間</button><button class="danger" id="r_del" onclick="delRoom()" style="display:none">刪除</button></div>
+    <div class="split actions"><button class="primary" onclick="saveRoom()">儲存房間</button><button class="danger" id="r_del" onclick="delRoom()" style="display:none">刪除</button></div>
   </div>
 </div></div>
 
@@ -244,9 +254,10 @@
     <div><label class="f">名稱</label><input id="f_name"></div>
     <div class="split"><div><label class="f">長</label><input id="f_l" type="number" inputmode="decimal"></div><div><label class="f">深/闊</label><input id="f_w" type="number" inputmode="decimal"></div><div><label class="f">高</label><input id="f_h" type="number" inputmode="decimal"></div></div>
     <div class="split"><div><label class="f">所屬</label><select id="f_room"><option value="">—</option><option>客廳</option><option>睡房</option><option>書房</option><option>BB</option><option>廚房</option><option>其他</option></select></div><div><label class="f">狀態</label><select id="f_status"><option>現有</option><option>擬購</option><option>不搬</option></select></div></div>
-    <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" id="f_split" style="width:auto"> 可拆件</label>
+    <div class="split"><div><label class="f">開門方式</label><select id="f_door"><option value="">（自動推算）</option><option>無</option><option>掩門</option><option>趟門</option><option>抽屜</option><option>摺門</option></select></div><div><label class="f">開門深度 (cm)</label><input id="f_swing" type="number" inputmode="decimal" placeholder="掩門＝單扇門闊"></div></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" id="f_split" style="width:auto;min-height:0"> 可拆件</label>
     <div><label class="f">備註</label><input id="f_note"></div>
-    <div class="split"><button class="primary" onclick="saveFurn()">儲存</button><button class="danger" id="f_del" onclick="delFurn()" style="display:none">刪除</button></div>
+    <div class="split actions"><button class="primary" onclick="saveFurn()">儲存</button><button class="danger" id="f_del" onclick="delFurn()" style="display:none">刪除</button></div>
   </div>
 </div></div>
 
@@ -266,7 +277,7 @@
     <div class="split"><div><label class="f">佣金</label><input id="c_comm" placeholder="半個月租"></div><div><label class="f">評價</label><select id="c_rate"><option value="">—</option><option>好</option><option>一般</option><option>差</option></select></div></div>
     <div><label class="f">最後聯絡</label><input id="c_last" type="date"></div>
     <div><label class="f">備註</label><textarea id="c_note"></textarea></div>
-    <div class="split"><button class="primary" onclick="saveContact()">儲存</button><button class="danger" id="c_del" onclick="delContact()" style="display:none">刪除</button></div>
+    <div class="split actions"><button class="primary" onclick="saveContact()">儲存</button><button class="danger" id="c_del" onclick="delContact()" style="display:none">刪除</button></div>
   </div>
 </div></div>
 
@@ -280,7 +291,7 @@
     <div><label class="f">經誰（代理）</label><select id="o_agent"><option value="">—</option></select></div>
     <div><label class="f">摘要 *</label><input id="o_title" placeholder="例：出價 $17,500 並要求拆客廳櫃"></div>
     <div><label class="f">詳情</label><textarea id="o_detail"></textarea></div>
-    <div class="split"><button class="primary" onclick="saveOffer()">儲存</button><button class="danger" id="o_del" onclick="delOffer()" style="display:none">刪除</button></div>
+    <div class="split actions"><button class="primary" onclick="saveOffer()">儲存</button><button class="danger" id="o_del" onclick="delOffer()" style="display:none">刪除</button></div>
   </div>
 </div></div>
 
@@ -586,14 +597,14 @@ async function aiCompare(){const ids=cmpSel.filter(id=>!id.startsWith('tmp_'));i
 /* ===================== 傢俬 ===================== */
 function renderFurn(){const el=$('furnList');if(!DB.furniture.length){el.innerHTML='<div class="empty">未有傢俬（Notion 傢俬表為空或未同步）。</div>';return}
   const groups={};DB.furniture.forEach(f=>{(groups[f.所屬||'其他']=groups[f.所屬||'其他']||[]).push(f)});
-  el.innerHTML=Object.entries(groups).map(([g,l])=>`<h2>${esc(g)}</h2>`+l.map(f=>`<div class="card tap" onclick="openFurn('${f.id}')"><h3><span>${esc(f.名稱)}</span><span class="tag ${f.狀態==='擬購'?'blue':f.狀態==='不搬'?'gray':'ok'}">${esc(f.狀態||'現有')}</span></h3><div class="dims">${f.長||'–'} × ${f.闊||'–'} × ${f.高||'–'} cm${f.可拆件?' · 可拆件':''}${f.備註?`<span class="ft">${esc(f.備註)}</span>`:''}</div></div>`).join('')).join('')}
-function openFurn(id){const f=id?DB.furniture.find(x=>x.id===id):null;$('furnTitle').textContent=f?'編輯傢俬':'新增傢俬';$('f_id').value=f?f.id:'';const set=(el,v)=>$(el).value=v==null?'':v;set('f_name',f?f.名稱:'');set('f_l',f?f.長:'');set('f_w',f?f.闊:'');set('f_h',f?f.高:'');set('f_room',f?f.所屬:'');set('f_status',f?(f.狀態||'現有'):'現有');$('f_split').checked=!!(f&&f.可拆件);set('f_note',f?f.備註:'');$('f_del').style.display=f?'':'none';$('shFurn').classList.add('on')}
+  el.innerHTML=Object.entries(groups).map(([g,l])=>`<h2>${esc(g)}</h2>`+l.map(f=>{const sw=swingOf(f);return `<div class="card tap" onclick="openFurn('${f.id}')"><h3><span>${esc(f.名稱)}</span><span><span class="tag ${f.狀態==='擬購'?'blue':f.狀態==='不搬'?'gray':'ok'}">${esc(f.狀態||'現有')}</span> <button class="sm" onclick="event.stopPropagation();arOne('${f.id}')">AR</button></span></h3><div class="dims">${f.長||'–'} × ${f.闊||'–'} × ${f.高||'–'} cm${f.可拆件?' · 可拆件':''}${sw.mode!=='無'?' · '+sw.mode+' '+sw.depth+'cm'+(sw.inferred?'（推算）':''):''}${f.備註?`<span class="ft">${esc(f.備註)}</span>`:''}</div></div>`}).join('')).join('')}
+function openFurn(id){const f=id?DB.furniture.find(x=>x.id===id):null;$('furnTitle').textContent=f?'編輯傢俬':'新增傢俬';$('f_id').value=f?f.id:'';const set=(el,v)=>$(el).value=v==null?'':v;set('f_name',f?f.名稱:'');set('f_l',f?f.長:'');set('f_w',f?f.闊:'');set('f_h',f?f.高:'');set('f_room',f?f.所屬:'');set('f_status',f?(f.狀態||'現有'):'現有');$('f_split').checked=!!(f&&f.可拆件);set('f_door',f?(f.開門方式||''):'');set('f_swing',f?f.開門深度:'');set('f_note',f?f.備註:'');$('f_del').style.display=f?'':'none';$('shFurn').classList.add('on')}
 async function saveFurn(){const name=$('f_name').value.trim();if(!name){toast('請輸入名稱');return}const id=$('f_id').value||tmpId(),isNew=!$('f_id').value;
-  const data={名稱:name,長:nn($('f_l').value),闊:nn($('f_w').value),高:nn($('f_h').value),所屬:$('f_room').value||null,狀態:$('f_status').value,可拆件:$('f_split').checked,備註:$('f_note').value.trim()};
+  const data={名稱:name,長:nn($('f_l').value),闊:nn($('f_w').value),高:nn($('f_h').value),所屬:$('f_room').value||inferRoom(name),狀態:$('f_status').value,可拆件:$('f_split').checked,開門方式:$('f_door').value||null,開門深度:nn($('f_swing').value),備註:$('f_note').value.trim()};
   closeSheet('shFurn');await write('furniture',isNew?'POST':'PATCH',id,data,()=>{const i=DB.furniture.findIndex(x=>x.id===id);const o=Object.assign({id},DB.furniture[i]||{},data);if(i>=0)DB.furniture[i]=o;else DB.furniture.push(o)})}
 async function delFurn(){const id=$('f_id').value;if(!confirm('刪除此傢俬？'))return;closeSheet('shFurn');await write('furniture','DELETE',id,undefined,()=>{DB.furniture=DB.furniture.filter(x=>x.id!==id)})}
 function openImportFurn(){$('importBox').value='';$('shImport').classList.add('on')}
-function parseFurnLines(text){const ok=[],bad=[];text.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const p=l.split(/[,\t，]+|\s+/).map(s=>s.trim()).filter(Boolean);const nums=[],names=[];p.forEach(x=>{if(/^[\d.]+$/.test(x)&&nums.length<3&&names.length)nums.push(+x);else if(nums.length<3)names.push(x)});if(names.length&&nums.length===3)ok.push({名稱:names.join(' '),長:nums[0],闊:nums[1],高:nums[2],狀態:'現有',備註:''});else bad.push(l)});return{ok,bad}}
+function parseFurnLines(text){const ok=[],bad=[];text.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const p=l.split(/[,\t，]+|\s+/).map(s=>s.trim()).filter(Boolean);const nums=[],names=[];p.forEach(x=>{if(/^[\d.]+$/.test(x)&&nums.length<3&&names.length)nums.push(+x);else if(nums.length<3)names.push(x)});if(names.length&&nums.length===3)ok.push({名稱:names.join(' '),長:nums[0],闊:nums[1],高:nums[2],所屬:inferRoom(names.join(' ')),狀態:'現有',備註:''});else bad.push(l)});return{ok,bad}}
 async function doImportFurn(){const{ok,bad}=parseFurnLines($('importBox').value);closeSheet('shImport');for(const d of ok){const id=tmpId();await write('furniture','POST',id,d,()=>DB.furniture.push(Object.assign({id},d)))}toast(`匯入 ${ok.length} 件`+(bad.length?`，${bad.length} 行格式不符`:''));if(bad.length)alert('未能解析：\n'+bad.join('\n'))}
 
 /* ===================== 代理 ===================== */
@@ -607,6 +618,24 @@ async function delContact(){const id=$('c_id').value;if(!confirm('刪除此聯�
 
 /* ===================== 平面規劃器 ===================== */
 const PLAN={room:null,items:[],door:{wall:'S',off:0.5},sel:null,scale:1,pad:24,drag:null,dirty:false};
+const ROOM_MATCH={客廳:['客廳'],睡房:['睡房','BB','書房'],廚房:['廚房'],儲物室:['其他'],工人房:['BB','其他'],其他:['其他']};
+function inferRoom(name){const n=String(name||'');if(/BB|嬰|bb/.test(n))return 'BB';if(/床|衣櫃|梳妝|睡房/.test(n))return '睡房';if(/書|升降枱|電腦/.test(n))return '書房';if(/梳化|電視|飯枱|餐|鞋櫃|客廳|茶几/.test(n))return '客廳';if(/雪櫃|爐|廚|微波|洗衣/.test(n))return '廚房';return '其他'}
+// 開門參數：有填用填，無填按名稱推算（掩門＝單扇門闊≈長/2，上限60；抽屜＝拉出深度≈闊）
+function swingOf(f){if(f.開門方式&&f.開門方式!=='無'){return{mode:f.開門方式,depth:f.開門深度||(f.開門方式==='掩門'?Math.min(60,Math.round((f.長||0)/2)):f.開門方式==='抽屜'?Math.round(f.闊||40):f.開門方式==='摺門'?Math.round((f.長||0)/4):0),inferred:!f.開門深度}}
+  if(f.開門方式==='無')return{mode:'無',depth:0,inferred:false};const n=f.名稱||'';
+  if(/櫃|衣櫥|wardrobe/i.test(n)&&!/電視/.test(n))return{mode:'掩門',depth:Math.min(60,Math.round((f.長||0)/2)),inferred:true};
+  if(/電視櫃|梳妝|抽屜|書枱|升降枱/.test(n))return{mode:'抽屜',depth:Math.round(Math.min(f.闊||40,50)),inferred:true};
+  return{mode:'無',depth:0,inferred:false}}
+function frontDir(rot){return [[0,1],[-1,0],[0,-1],[1,0]][((rot%360)+360)%360/90|0]}
+// 門前淨空距離（cm）：由正面邊沿向前掃描至牆或其他傢俬
+function clearance(idx,rects){const q=rects[idx];const r=PLAN.room;const [dx,dy]=frontDir(PLAN.items[idx].rot);let D;
+  if(dy===1){D=r.闊-(q.y+q.h);rects.forEach((o,j)=>{if(j!==idx&&o&&o.x<q.x+q.w&&o.x+o.w>q.x&&o.y>=q.y+q.h)D=Math.min(D,o.y-(q.y+q.h))})}
+  else if(dy===-1){D=q.y;rects.forEach((o,j)=>{if(j!==idx&&o&&o.x<q.x+q.w&&o.x+o.w>q.x&&o.y+o.h<=q.y)D=Math.min(D,q.y-(o.y+o.h))})}
+  else if(dx===1){D=r.長-(q.x+q.w);rects.forEach((o,j)=>{if(j!==idx&&o&&o.y<q.y+q.h&&o.y+o.h>q.y&&o.x>=q.x+q.w)D=Math.min(D,o.x-(q.x+q.w))})}
+  else{D=q.x;rects.forEach((o,j)=>{if(j!==idx&&o&&o.y<q.y+q.h&&o.y+o.h>q.y&&o.x+o.w<=q.x)D=Math.min(D,q.x-(o.x+o.w))})}
+  return Math.max(0,Math.round(D))}
+function swingRect(q,rot,depth){const [dx,dy]=frontDir(rot);if(dy===1)return{x:q.x,y:q.y+q.h,w:q.w,h:depth};if(dy===-1)return{x:q.x,y:q.y-depth,w:q.w,h:depth};if(dx===1)return{x:q.x+q.w,y:q.y,w:depth,h:q.h};return{x:q.x-depth,y:q.y,w:depth,h:q.h}}
+function walkRating(cm){return cm>=120?'兩人並行':cm>=90?'一人舒適':cm>=60?'一人側身':cm>0?'不可通行':'無空間'}
 const WALLS=['S','E','N','W'];
 function planInit(){const sel=$('planRoom');const rooms=roomsOf(curFlat).filter(r=>r.長&&r.闊);const cur=sel.value;
   sel.innerHTML=rooms.map(r=>`<option value="${r.id}">${esc(r.名稱)}（${r.長}×${r.闊}）</option>`).join('');
@@ -615,8 +644,34 @@ function planInit(){const sel=$('planRoom');const rooms=roomsOf(curFlat).filter(
 function planLoad(){const r=DB.rooms.find(x=>x.id===$('planRoom').value);if(!r)return;PLAN.room=r;PLAN.sel=null;PLAN.dirty=false;
   let lay=null;try{lay=r.佈局?JSON.parse(r.佈局):null}catch(e){}
   PLAN.items=(lay&&lay.items||[]).filter(i=>DB.furniture.some(f=>f.id===i.f));PLAN.door=(lay&&lay.door)||{wall:'S',off:0.5};
-  $('planChips').innerHTML=DB.furniture.filter(f=>f.狀態!=='不搬'&&f.長&&f.闊).map(f=>`<button class="sm" style="margin:0 4px 4px 0;${PLAN.items.some(i=>i.f===f.id)?'background:var(--tape)':''}" onclick="planAdd('${f.id}')">${esc(f.名稱)}</button>`).join('');
-  planDraw()}
+  planRenderChips();planDraw()}
+function planRoomSet(){const want=ROOM_MATCH[PLAN.room.類型]||[];return DB.furniture.filter(f=>f.狀態!=='不搬'&&f.長&&f.闊&&want.includes(f.所屬||inferRoom(f.名稱)))}
+function planRenderChips(){const all=DB.furniture.filter(f=>f.狀態!=='不搬'&&f.長&&f.闊);const mine=planRoomSet();const others=all.filter(f=>!mine.includes(f));
+  const chip=f=>`<button class="sm" style="margin:0 4px 4px 0;${PLAN.items.some(i=>i.f===f.id)?'background:var(--accent-soft);border-color:var(--accent)':''}" onclick="planAdd('${f.id}')">${esc(f.名稱)}${f.狀態==='擬購'?' ·擬購':''}</button>`;
+  $('planChips').innerHTML=(mine.length?`<div class="grp">${esc(PLAN.room.類型||'')}傢俬</div>`+mine.map(chip).join(''):'')+(others.length?`<div class="grp">其他</div>`+others.map(chip).join(''):'')}
+function planAddRoomSet(){if(!PLAN.room)return;let n=0;planRoomSet().forEach(f=>{if(!PLAN.items.some(i=>i.f===f.id)){PLAN.items.push({f:f.id,x:0,y:0,rot:0});n++}});PLAN.dirty=true;planAuto();toast('已放入 '+n+' 件並靠牆排位')}
+// 自動靠牆：北→南→西→東，正面朝房內，避開門位及門扇範圍
+function planAuto(){const r=PLAN.room;if(!r)return;const items=[...PLAN.items].map((it,i)=>({it,i,f:DB.furniture.find(x=>x.id===it.f)})).filter(x=>x.f).sort((a,b)=>b.f.長*b.f.闊-a.f.長*a.f.闊);
+  const gap=5;const door=r.門闊||0;const dz=PLAN.door;const inDoor=(wall,a,b)=>{if(!door||dz.wall!==wall)return false;const L=(wall==='N'||wall==='S')?r.長:r.闊;const c=L*dz.off;return a<c+door/2+door&&b>c-door/2-door};
+  const walls=[{w:'N',len:r.長},{w:'S',len:r.長},{w:'W',len:r.闊},{w:'E',len:r.闊}];let wi=0,cur=gap;const placed=[];
+  const cand=(wl,a,w,d)=>wl==='N'?{x:a,y:0,w,h:d,rot:0}:wl==='S'?{x:a,y:r.闊-d,w,h:d,rot:180}:wl==='W'?{x:0,y:a,w:d,h:w,rot:270}:{x:r.長-d,y:a,w:d,h:w,rot:90};
+  const ov=(p,q)=>p.x<q.x+q.w&&p.x+p.w>q.x&&p.y<q.y+q.h&&p.y+p.h>q.y;
+  for(const x of items){const f=x.f;let ok=false;let guard=0;
+    while(!ok&&guard++<40){const wl=walls[wi%4];const w=f.長,d=f.闊;
+      let a=cur;if(inDoor(wl.w,a,a+w)){const c=wl.len*dz.off;a=c+door/2+door+gap}
+      const q=cand(wl.w,a,w,d);const along=(wl.w==='N'||wl.w==='S');
+      if(a+w>wl.len-gap){wi++;cur=gap;if(wi>=8)break;continue}
+      const hit=placed.find(p=>ov(p,q));
+      if(hit){cur=(along?hit.x+hit.w:hit.y+hit.h)+gap;continue}
+      x.it.x=q.x;x.it.y=q.y;x.it.rot=q.rot;placed.push(q);cur=a+w+gap;ok=true}
+    if(!ok){x.it.x=Math.round(r.長/2-f.長/2);x.it.y=Math.round(r.闊/2-f.闊/2);x.it.rot=0}}
+  PLAN.dirty=true;planRenderChips();planDraw()}
+function planAR(){if(!PLAN.room){toast('先選房間');return}const spec={room:{l:PLAN.room.長,w:PLAN.room.闊},items:PLAN.items.map((i,k)=>{const f=DB.furniture.find(x=>x.id===i.f);return f?{n:'F'+k,w:f.長,d:f.闊,h:f.高||80,x:i.x,z:i.y,rot:i.rot}:null}).filter(Boolean)};
+  if(!spec.items.length){toast('先放入傢俬');return}openAR(spec)}
+function arOne(fid){const f=DB.furniture.find(x=>x.id===fid);if(!f||!f.長||!f.闊){toast('缺尺寸');return}openAR({items:[{n:'F0',w:f.長,d:f.闊,h:f.高||80}]})}
+function openAR(spec){const d=btoa(unescape(encodeURIComponent(JSON.stringify(spec)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const url=cfg.url.replace(/\/+$/,'')+'/ar?d='+d;
+  let a=$('arLink');if(!a){a=document.createElement('a');a.id='arLink';a.rel='ar';a.style.display='none';const img=document.createElement('img');img.src='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';a.appendChild(img);document.body.appendChild(a)}
+  a.href=url;a.click();toast('開啟 AR（iPhone Safari／主畫面 App 支援）',2200)}
 function planGeom(){const c=$('planCanvas');const W=c.clientWidth||340;const r=PLAN.room;const pad=PLAN.pad;
   const s=Math.min((W-pad*2)/r.長,(W-pad*2)/r.闊);const H=Math.round(r.闊*s+pad*2);
   const dpr=window.devicePixelRatio||1;if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);c.style.height=H+'px'}
@@ -624,9 +679,9 @@ function planGeom(){const c=$('planCanvas');const W=c.clientWidth||340;const r=P
 function planRect(i){const f=DB.furniture.find(x=>x.id===i.f);if(!f)return null;const w=i.rot%180?f.闊:f.長,h=i.rot%180?f.長:f.闊;return{x:i.x,y:i.y,w,h,f}}
 function planDraw(){const r=PLAN.room;if(!r)return;const g=planGeom();const ctx=g.c.getContext('2d');ctx.setTransform(g.dpr,0,0,g.dpr,0,0);ctx.clearRect(0,0,g.W,g.H);
   const X=cm=>g.pad+cm*g.s,Y=cm=>g.pad+cm*g.s;
-  ctx.fillStyle='#faf8f2';ctx.fillRect(X(0),Y(0),r.長*g.s,r.闊*g.s);ctx.lineWidth=3;ctx.strokeStyle='#1a1a1a';ctx.strokeRect(X(0),Y(0),r.長*g.s,r.闊*g.s);
+  ctx.fillStyle='#fffdf8';ctx.fillRect(X(0),Y(0),r.長*g.s,r.闊*g.s);ctx.lineWidth=3;ctx.strokeStyle='#1c1b18';ctx.strokeRect(X(0),Y(0),r.長*g.s,r.闊*g.s);
   // 門
-  if(r.門闊){const dw=r.門闊*g.s;ctx.strokeStyle='#c99d00';ctx.lineWidth=6;ctx.beginPath();const d=PLAN.door;
+  if(r.門闊){const dw=r.門闊*g.s;ctx.strokeStyle='#b8963a';ctx.lineWidth=6;ctx.beginPath();const d=PLAN.door;
     if(d.wall==='S'){const x=X(r.長*d.off)-dw/2;ctx.moveTo(x,Y(r.闊));ctx.lineTo(x+dw,Y(r.闊))}else if(d.wall==='N'){const x=X(r.長*d.off)-dw/2;ctx.moveTo(x,Y(0));ctx.lineTo(x+dw,Y(0))}
     else if(d.wall==='E'){const y=Y(r.闊*d.off)-dw/2;ctx.moveTo(X(r.長),y);ctx.lineTo(X(r.長),y+dw)}else{const y=Y(r.闊*d.off)-dw/2;ctx.moveTo(X(0),y);ctx.lineTo(X(0),y+dw)}
     ctx.stroke()}
@@ -635,16 +690,20 @@ function planDraw(){const r=PLAN.room;if(!r)return;const g=planGeom();const ctx=
   // 傢俬
   const rects=PLAN.items.map(planRect);
   rects.forEach((q,idx)=>{if(!q)return;const over=q.x<0||q.y<0||q.x+q.w>r.長||q.y+q.h>r.闊;const hit=rects.some((o,j)=>o&&j!==idx&&q.x<o.x+o.w&&q.x+q.w>o.x&&q.y<o.y+o.h&&q.y+q.h>o.y);
-    ctx.fillStyle=over||hit?'rgba(179,38,30,.25)':(PLAN.sel===idx?'rgba(240,196,25,.55)':'rgba(11,87,208,.18)');ctx.strokeStyle=over||hit?'#b3261e':(PLAN.sel===idx?'#c99d00':'#0b57d0');ctx.lineWidth=PLAN.sel===idx?2.5:1.5;
+    ctx.fillStyle=over||hit?'rgba(163,50,42,.25)':(PLAN.sel===idx?'rgba(184,150,58,.5)':'rgba(47,79,122,.16)');ctx.strokeStyle=over||hit?'#a3322a':(PLAN.sel===idx?'#8a6d1e':'#2f4f7a');ctx.lineWidth=PLAN.sel===idx?2.5:1.5;
     ctx.fillRect(X(q.x),Y(q.y),q.w*g.s,q.h*g.s);ctx.strokeRect(X(q.x),Y(q.y),q.w*g.s,q.h*g.s);
     ctx.fillStyle='#1a1a1a';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';const lbl=q.f.名稱.replace(/^(客廳|睡房|書房)/,'');ctx.fillText(lbl.length>6?lbl.slice(0,6):lbl,X(q.x+q.w/2),Y(q.y+q.h/2)+3)});
+  // 開門／抽屜佔用區 + 走動空間
+  const notes=[];
+  rects.forEach((q,idx)=>{if(!q)return;const sw=swingOf(q.f);if(sw.mode==='無'||!sw.depth)return;const D=clearance(idx,rects);const z=swingRect(q,PLAN.items[idx].rot,sw.depth);const okOpen=D>=sw.depth;const walk=Math.max(0,D-sw.depth);
+    ctx.setLineDash([4,3]);ctx.lineWidth=1.2;ctx.strokeStyle=okOpen?'#b8963a':'#a3322a';ctx.fillStyle=okOpen?'rgba(184,150,58,.13)':'rgba(163,50,42,.18)';ctx.fillRect(X(z.x),Y(z.y),z.w*g.s,z.h*g.s);ctx.strokeRect(X(z.x),Y(z.y),z.w*g.s,z.h*g.s);ctx.setLineDash([]);
+    notes.push(`${esc(q.f.名稱)}：${sw.mode}${sw.depth}cm${sw.inferred?'(推算)':''} · 門前 ${D}cm → ${okOpen?'開門後餘 '+walk+'cm <span class="tag '+(walk>=90?'ok':walk>=60?'warn':'bad')+'">'+walkRating(walk)+'</span>':'<span class="tag bad">門開不到</span>'}`)});
   const bad=rects.filter((q,idx)=>q&&(q.x<0||q.y<0||q.x+q.w>r.長||q.y+q.h>r.闊||rects.some((o,j)=>o&&j!==idx&&q.x<o.x+o.w&&q.x+q.w>o.x&&q.y<o.y+o.h&&q.y+q.h>o.y))).map(q=>q.f.名稱);
   const used=rects.reduce((a,q)=>a+(q?q.w*q.h:0),0)/(r.長*r.闊)*100;
-  $('planInfo').innerHTML=`${PLAN.items.length} 件 · 佔地 ${used.toFixed(0)}%${bad.length?' · <span class="tag bad">問題：'+esc(bad.join('、'))+'</span>':''}${PLAN.sel!=null&&rects[PLAN.sel]?' · 選取：'+esc(rects[PLAN.sel].f.名稱)+' '+rects[PLAN.sel].w+'×'+rects[PLAN.sel].h:''}${PLAN.dirty?' · <b style="color:var(--bad)">未儲存</b>':''}`}
-function planAdd(fid){const f=DB.furniture.find(x=>x.id===fid);if(!f||!PLAN.room)return;PLAN.items.push({f:fid,x:Math.max(0,PLAN.room.長/2-f.長/2),y:Math.max(0,PLAN.room.闊/2-f.闊/2),rot:0});PLAN.sel=PLAN.items.length-1;PLAN.dirty=true;planLoadChips();planDraw()}
-function planLoadChips(){$('planChips').querySelectorAll('button').forEach(b=>{const id=b.getAttribute('onclick').match(/'([^']+)'/)[1];b.style.background=PLAN.items.some(i=>i.f===id)?'var(--tape)':''})}
+  $('planInfo').innerHTML=`${PLAN.items.length} 件 · 佔地 ${used.toFixed(0)}%${bad.length?' · <span class="tag bad">出牆／重疊：'+esc(bad.join('、'))+'</span>':''}${PLAN.sel!=null&&rects[PLAN.sel]?' · 選取：'+esc(rects[PLAN.sel].f.名稱)+' '+rects[PLAN.sel].w+'×'+rects[PLAN.sel].h:''}${PLAN.dirty?' · <b style="color:var(--bad)">未儲存</b>':''}${notes.length?'<div style="margin-top:6px;line-height:1.7">'+notes.join('<br>')+'</div>':''}`}
+function planAdd(fid){const f=DB.furniture.find(x=>x.id===fid);if(!f||!PLAN.room)return;PLAN.items.push({f:fid,x:Math.max(0,PLAN.room.長/2-f.長/2),y:Math.max(0,PLAN.room.闊/2-f.闊/2),rot:0});PLAN.sel=PLAN.items.length-1;PLAN.dirty=true;planRenderChips();planDraw()}
 function planRotate(){if(PLAN.sel==null)return;PLAN.items[PLAN.sel].rot=(PLAN.items[PLAN.sel].rot+90)%360;PLAN.dirty=true;planDraw()}
-function planRemove(){if(PLAN.sel==null)return;PLAN.items.splice(PLAN.sel,1);PLAN.sel=null;PLAN.dirty=true;planLoadChips();planDraw()}
+function planRemove(){if(PLAN.sel==null)return;PLAN.items.splice(PLAN.sel,1);PLAN.sel=null;PLAN.dirty=true;planRenderChips();planDraw()}
 function planDoorWall(){const i=WALLS.indexOf(PLAN.door.wall);PLAN.door.wall=WALLS[(i+1)%4];PLAN.dirty=true;planDraw()}
 async function planSave(){if(!PLAN.room)return;const data={佈局:JSON.stringify({items:PLAN.items.map(i=>({f:i.f,x:Math.round(i.x),y:Math.round(i.y),rot:i.rot})),door:PLAN.door,v:1})};
   if(data.佈局.length>1900){toast('傢俬太多，超出儲存上限');return}
