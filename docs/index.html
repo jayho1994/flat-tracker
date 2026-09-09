@@ -146,7 +146,8 @@
     <h2>連線</h2>
     <div class="stack">
       <div><label class="f">Lambda Function URL</label><input id="cfgUrl" inputmode="url" autocapitalize="off" placeholder="https://xxxx.lambda-url.ap-east-1.on.aws/"></div>
-      <div><label class="f">APP KEY</label><input id="cfgKey" autocapitalize="off"></div>
+      <div><label class="f">APP KEY</label><input id="cfgKey" autocapitalize="off" placeholder="通常由設定連結自動填入"></div>
+      <p class="hint">分享設定連結給另一部電話：<button class="link" onclick="shareSetupLink()">複製太太的設定連結</button></p>
       <div><label class="f">我是</label><select id="cfgWho"><option>Jay</option><option>太太</option></select></div>
       <button class="primary" onclick="saveCfg()">儲存並測試連線</button>
       <div id="cfgResult" class="hint"></div>
@@ -277,6 +278,7 @@
 <script>
 /* ===================== 常數 ===================== */
 const CFG_KEY='ft2-cfg', CACHE_KEY='ft2-cache', OUTBOX_KEY='ft2-outbox';
+const DEFAULT_URL='https://cfqd4cmn32nthawee4g7zl4fpm0kwhqz.lambda-url.ap-northeast-1.on.aws/'; // Jay 的 Lambda；URL 本身無 key 無用
 const STAGES=['網上見到','已約睇','已睇','考慮中','已出價','談判中','已簽約','淘汰'];
 const INCL=['管理費','差餉','地租','傢俬','家電','冷氣','車位'];
 const TAGS=['近教會','近健康院','近港鐵','有會所','單邊','高層','開揚','嘈','西斜','舊樓'];
@@ -601,13 +603,20 @@ async function copySummary(){const t=summaryText();try{await navigator.clipboard
 async function saveCfg(condOnly){cfg.url=$('cfgUrl').value.trim();cfg.key=$('cfgKey').value.trim();cfg.who=$('cfgWho').value;cfg.budget=$('cfgBudget').value;cfg.moveOut=$('cfgMoveOut').value;cfg.church=$('cfgChurch').value.trim();cfg.work=$('cfgWork').value.trim();saveLocal();
   if(condOnly){toast('已儲存');renderAll();return}
   $('cfgResult').textContent='測試中…';try{const h=await api('GET','/health');$('cfgResult').textContent='連線成功 · Notion '+h.notion_version+' · AI '+(h.llm&&h.llm!=='none'?h.llm+' ('+h.model+')':'✗ 未設 key')+' · Telegram '+(h.telegram?'✓':'—');await sync(true);startPolling()}catch(e){$('cfgResult').textContent='連線失敗：'+e.message}}
+function shareSetupLink(){const who=cfg.who==='Jay'?'太太':'Jay';const link=location.origin+location.pathname+'#k='+encodeURIComponent(cfg.key)+'&who='+encodeURIComponent(who);navigator.clipboard.writeText(link).then(()=>toast('已複製 '+who+' 的設定連結，WhatsApp 傳送即可'),()=>prompt('長按複製：',link))}
 function renderOutbox(){$('outboxInfo').textContent=outbox.length?(outbox.length+' 項未同步（'+outbox.map(o=>o.kind+' '+o.method).join('、')+'）'):'無待同步項目'}
 function clearLocal(){if(!confirm('清除本機快取及未同步佇列？'))return;localStorage.removeItem(CACHE_KEY);localStorage.removeItem(OUTBOX_KEY);DB={flats:[],rooms:[],furniture:[],contacts:[],offers:[],checks:[]};outbox=[];renderAll();toast('已清除')}
 function renderAll(){renderBoard();renderList();renderFurn();renderContacts();if($('v-detail').classList.contains('on'))renderDetail();if($('v-compare').classList.contains('on'))renderComparePick()}
 
 /* ===================== 啟動 ===================== */
-loadLocal();renderAll();
-if(cfg.url&&cfg.key){sync(false);startPolling()}else{setSt('未設定',true);go('setup')}
+loadLocal();
+if(!cfg.url)cfg.url=DEFAULT_URL;
+// 一次性設定連結：https://.../#k=<APP_KEY>&who=太太  → 讀入後即從網址移除，key 不留在 repo 或瀏覽紀錄
+(function(){const h=new URLSearchParams(location.hash.replace(/^#/,''));let changed=false;
+  if(h.get('k')){cfg.key=h.get('k');changed=true}if(h.get('who')){cfg.who=h.get('who');changed=true}if(h.get('u')){cfg.url=h.get('u');changed=true}
+  if(changed){saveLocal();history.replaceState(null,'',location.pathname+location.search);toast('已透過連結完成設定（'+cfg.who+'）',2600)}})();
+saveLocal();renderAll();
+if(cfg.url&&cfg.key){sync(false);startPolling()}else{setSt('未設定',true);go('setup');$('cfgKey').focus()}
 window.addEventListener('online',()=>{if(outbox.length)flushOutbox()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cfg.url)sync(false)});
 </script>
