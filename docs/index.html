@@ -83,7 +83,7 @@
 </style>
 </head>
 <body>
-<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v2.4</span></h1><span class="st" id="syncSt">—</span></header>
+<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v2.5</span></h1><span class="st" id="syncSt">—</span></header>
 
 <main>
   <!-- 看板 -->
@@ -112,11 +112,19 @@
   <section id="v-detail" class="view">
     <div class="topbar"><button class="sm" onclick="go(prevView||'board')">‹ 返回</button><h2 id="dTitle"></h2><button class="sm" onclick="openFlat(curFlat)">編輯</button></div>
     <div class="tabs">
-      <button class="on" data-t="info" onclick="tab('info')">資料</button><button data-t="rooms" onclick="tab('rooms')">房間</button><button data-t="fit" onclick="tab('fit')">配對</button><button data-t="check" onclick="tab('check')">檢查表</button><button data-t="offers" onclick="tab('offers')">出價</button><button data-t="ai" onclick="tab('ai')">AI</button>
+      <button class="on" data-t="info" onclick="tab('info')">資料</button><button data-t="rooms" onclick="tab('rooms')">房間</button><button data-t="fit" onclick="tab('fit')">配對</button><button data-t="plan" onclick="tab('plan')">平面</button><button data-t="check" onclick="tab('check')">檢查表</button><button data-t="offers" onclick="tab('offers')">出價</button><button data-t="ai" onclick="tab('ai')">AI</button>
     </div>
     <div id="t-info" class="tab on"></div>
     <div id="t-rooms" class="tab"><div class="split"><button class="primary" onclick="openRoom()">＋ 新增房間</button><button onclick="copySummary()">複製摘要</button></div><div id="roomList" style="margin-top:10px"></div></div>
     <div id="t-fit" class="tab"><label class="f">選擇房間</label><select id="fitRoom" onchange="renderFit()"></select><p class="hint">判準：地面 = 傢俬長×闊可平放或轉90°放入房間長×闊；入門 = 三邊中最細兩邊 ≤ 門闊×門高（門高留空當 200）。不計轉角、走廊、樓底。「不搬」傢俬不計。</p><div id="fitList" class="card"></div></div>
+    <div id="t-plan" class="tab">
+      <div class="split"><select id="planRoom" onchange="planLoad()"></select><button class="sm" onclick="planDoorWall()">門位 ↻</button></div>
+      <p class="hint">按下方傢俬加入房間；拖動移位、點一下選取後可「旋轉」「移除」。紅色＝超出牆身或重疊。比例準確（cm）。儲存後兩部電話同步。</p>
+      <div id="planChips" style="margin-bottom:8px"></div>
+      <canvas id="planCanvas" style="width:100%;border:1.5px solid var(--line);border-radius:10px;touch-action:none;background:#fff"></canvas>
+      <div id="planInfo" class="sub" style="margin-top:6px"></div>
+      <div class="split" style="margin-top:8px"><button class="sm" onclick="planRotate()">旋轉 90°</button><button class="sm danger" onclick="planRemove()">移除</button><button class="sm tape" onclick="planSave()">儲存佈局</button><button class="sm" onclick="planExport()">匯出圖片</button></div>
+    </div>
     <div id="t-check" class="tab"></div>
     <div id="t-offers" class="tab"><button class="primary" style="width:100%" onclick="openOffer()">＋ 記錄出價／要求／回覆</button><div id="offerList" style="margin-top:10px"></div></div>
     <div id="t-ai" class="tab"></div>
@@ -172,7 +180,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v2.4 · 2026-09-09</p>
+    <p class="hint" style="margin-top:12px">v2.5 · 2026-09-09</p>
   </section>
 </main>
 
@@ -378,7 +386,7 @@ function go(v){
   if(v==='compare')renderComparePick();
   window.scrollTo(0,0);
 }
-function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+t));if(t==='fit')renderFit();if(t==='check')renderCheck();if(t==='ai')renderAI()}
+function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+t));if(t==='fit')renderFit();if(t==='plan')planInit();if(t==='check')renderCheck();if(t==='ai')renderAI()}
 function closeSheet(id){$(id).classList.remove('on')}
 function openDetail(id){curFlat=id;go('detail');tab('info');renderDetail()}
 
@@ -593,6 +601,59 @@ async function saveContact(){const name=$('c_name').value.trim();if(!name){toast
   const data={姓名:name,角色:$('c_role').value,公司:$('c_co').value.trim(),電話:$('c_tel').value.trim()||null,佣金:$('c_comm').value.trim(),評價:$('c_rate').value||null,最後聯絡:$('c_last').value||null,備註:$('c_note').value.trim()};
   closeSheet('shContact');await write('contacts',isNew?'POST':'PATCH',id,data,()=>{const i=DB.contacts.findIndex(x=>x.id===id);const o=Object.assign({id},DB.contacts[i]||{},data);if(i>=0)DB.contacts[i]=o;else DB.contacts.push(o)})}
 async function delContact(){const id=$('c_id').value;if(!confirm('刪除此聯絡人？'))return;closeSheet('shContact');await write('contacts','DELETE',id,undefined,()=>{DB.contacts=DB.contacts.filter(x=>x.id!==id)})}
+
+/* ===================== 平面規劃器 ===================== */
+const PLAN={room:null,items:[],door:{wall:'S',off:0.5},sel:null,scale:1,pad:24,drag:null,dirty:false};
+const WALLS=['S','E','N','W'];
+function planInit(){const sel=$('planRoom');const rooms=roomsOf(curFlat).filter(r=>r.長&&r.闊);const cur=sel.value;
+  sel.innerHTML=rooms.map(r=>`<option value="${r.id}">${esc(r.名稱)}（${r.長}×${r.闊}）</option>`).join('');
+  if(!rooms.length){$('planInfo').textContent='先於「房間」分頁輸入房間長闊。';return}
+  if(rooms.some(r=>r.id===cur))sel.value=cur; planLoad()}
+function planLoad(){const r=DB.rooms.find(x=>x.id===$('planRoom').value);if(!r)return;PLAN.room=r;PLAN.sel=null;PLAN.dirty=false;
+  let lay=null;try{lay=r.佈局?JSON.parse(r.佈局):null}catch(e){}
+  PLAN.items=(lay&&lay.items||[]).filter(i=>DB.furniture.some(f=>f.id===i.f));PLAN.door=(lay&&lay.door)||{wall:'S',off:0.5};
+  $('planChips').innerHTML=DB.furniture.filter(f=>f.狀態!=='不搬'&&f.長&&f.闊).map(f=>`<button class="sm" style="margin:0 4px 4px 0;${PLAN.items.some(i=>i.f===f.id)?'background:var(--tape)':''}" onclick="planAdd('${f.id}')">${esc(f.名稱)}</button>`).join('');
+  planDraw()}
+function planGeom(){const c=$('planCanvas');const W=c.clientWidth||340;const r=PLAN.room;const pad=PLAN.pad;
+  const s=Math.min((W-pad*2)/r.長,(W-pad*2)/r.闊);const H=Math.round(r.闊*s+pad*2);
+  const dpr=window.devicePixelRatio||1;if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);c.style.height=H+'px'}
+  PLAN.scale=s;return{c,W,H,s,pad,dpr}}
+function planRect(i){const f=DB.furniture.find(x=>x.id===i.f);if(!f)return null;const w=i.rot%180?f.闊:f.長,h=i.rot%180?f.長:f.闊;return{x:i.x,y:i.y,w,h,f}}
+function planDraw(){const r=PLAN.room;if(!r)return;const g=planGeom();const ctx=g.c.getContext('2d');ctx.setTransform(g.dpr,0,0,g.dpr,0,0);ctx.clearRect(0,0,g.W,g.H);
+  const X=cm=>g.pad+cm*g.s,Y=cm=>g.pad+cm*g.s;
+  ctx.fillStyle='#faf8f2';ctx.fillRect(X(0),Y(0),r.長*g.s,r.闊*g.s);ctx.lineWidth=3;ctx.strokeStyle='#1a1a1a';ctx.strokeRect(X(0),Y(0),r.長*g.s,r.闊*g.s);
+  // 門
+  if(r.門闊){const dw=r.門闊*g.s;ctx.strokeStyle='#c99d00';ctx.lineWidth=6;ctx.beginPath();const d=PLAN.door;
+    if(d.wall==='S'){const x=X(r.長*d.off)-dw/2;ctx.moveTo(x,Y(r.闊));ctx.lineTo(x+dw,Y(r.闊))}else if(d.wall==='N'){const x=X(r.長*d.off)-dw/2;ctx.moveTo(x,Y(0));ctx.lineTo(x+dw,Y(0))}
+    else if(d.wall==='E'){const y=Y(r.闊*d.off)-dw/2;ctx.moveTo(X(r.長),y);ctx.lineTo(X(r.長),y+dw)}else{const y=Y(r.闊*d.off)-dw/2;ctx.moveTo(X(0),y);ctx.lineTo(X(0),y+dw)}
+    ctx.stroke()}
+  // 尺寸標註
+  ctx.fillStyle='#6b6760';ctx.font='11px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(r.長+' cm',X(r.長/2),Y(0)-8);ctx.save();ctx.translate(X(0)-8,Y(r.闊/2));ctx.rotate(-Math.PI/2);ctx.fillText(r.闊+' cm',0,0);ctx.restore();
+  // 傢俬
+  const rects=PLAN.items.map(planRect);
+  rects.forEach((q,idx)=>{if(!q)return;const over=q.x<0||q.y<0||q.x+q.w>r.長||q.y+q.h>r.闊;const hit=rects.some((o,j)=>o&&j!==idx&&q.x<o.x+o.w&&q.x+q.w>o.x&&q.y<o.y+o.h&&q.y+q.h>o.y);
+    ctx.fillStyle=over||hit?'rgba(179,38,30,.25)':(PLAN.sel===idx?'rgba(240,196,25,.55)':'rgba(11,87,208,.18)');ctx.strokeStyle=over||hit?'#b3261e':(PLAN.sel===idx?'#c99d00':'#0b57d0');ctx.lineWidth=PLAN.sel===idx?2.5:1.5;
+    ctx.fillRect(X(q.x),Y(q.y),q.w*g.s,q.h*g.s);ctx.strokeRect(X(q.x),Y(q.y),q.w*g.s,q.h*g.s);
+    ctx.fillStyle='#1a1a1a';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';const lbl=q.f.名稱.replace(/^(客廳|睡房|書房)/,'');ctx.fillText(lbl.length>6?lbl.slice(0,6):lbl,X(q.x+q.w/2),Y(q.y+q.h/2)+3)});
+  const bad=rects.filter((q,idx)=>q&&(q.x<0||q.y<0||q.x+q.w>r.長||q.y+q.h>r.闊||rects.some((o,j)=>o&&j!==idx&&q.x<o.x+o.w&&q.x+q.w>o.x&&q.y<o.y+o.h&&q.y+q.h>o.y))).map(q=>q.f.名稱);
+  const used=rects.reduce((a,q)=>a+(q?q.w*q.h:0),0)/(r.長*r.闊)*100;
+  $('planInfo').innerHTML=`${PLAN.items.length} 件 · 佔地 ${used.toFixed(0)}%${bad.length?' · <span class="tag bad">問題：'+esc(bad.join('、'))+'</span>':''}${PLAN.sel!=null&&rects[PLAN.sel]?' · 選取：'+esc(rects[PLAN.sel].f.名稱)+' '+rects[PLAN.sel].w+'×'+rects[PLAN.sel].h:''}${PLAN.dirty?' · <b style="color:var(--bad)">未儲存</b>':''}`}
+function planAdd(fid){const f=DB.furniture.find(x=>x.id===fid);if(!f||!PLAN.room)return;PLAN.items.push({f:fid,x:Math.max(0,PLAN.room.長/2-f.長/2),y:Math.max(0,PLAN.room.闊/2-f.闊/2),rot:0});PLAN.sel=PLAN.items.length-1;PLAN.dirty=true;planLoadChips();planDraw()}
+function planLoadChips(){$('planChips').querySelectorAll('button').forEach(b=>{const id=b.getAttribute('onclick').match(/'([^']+)'/)[1];b.style.background=PLAN.items.some(i=>i.f===id)?'var(--tape)':''})}
+function planRotate(){if(PLAN.sel==null)return;PLAN.items[PLAN.sel].rot=(PLAN.items[PLAN.sel].rot+90)%360;PLAN.dirty=true;planDraw()}
+function planRemove(){if(PLAN.sel==null)return;PLAN.items.splice(PLAN.sel,1);PLAN.sel=null;PLAN.dirty=true;planLoadChips();planDraw()}
+function planDoorWall(){const i=WALLS.indexOf(PLAN.door.wall);PLAN.door.wall=WALLS[(i+1)%4];PLAN.dirty=true;planDraw()}
+async function planSave(){if(!PLAN.room)return;const data={佈局:JSON.stringify({items:PLAN.items.map(i=>({f:i.f,x:Math.round(i.x),y:Math.round(i.y),rot:i.rot})),door:PLAN.door,v:1})};
+  if(data.佈局.length>1900){toast('傢俬太多，超出儲存上限');return}
+  await write('rooms','PATCH',PLAN.room.id,data,()=>{PLAN.room.佈局=data.佈局});PLAN.dirty=false;planDraw();toast('佈局已儲存')}
+function planExport(){const c=$('planCanvas');const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=(flatTitle(DB.flats.find(f=>f.id===curFlat))+'-'+PLAN.room.名稱+'.png').replace(/\s+/g,'_');a.click()}
+(function(){const c=$('planCanvas');let start=null;
+  const pos=e=>{const b=c.getBoundingClientRect();return{x:(e.clientX-b.left-PLAN.pad)/PLAN.scale,y:(e.clientY-b.top-PLAN.pad)/PLAN.scale}};
+  c.addEventListener('pointerdown',e=>{if(!PLAN.room)return;const p=pos(e);let hit=null;for(let i=PLAN.items.length-1;i>=0;i--){const q=planRect(PLAN.items[i]);if(q&&p.x>=q.x&&p.x<=q.x+q.w&&p.y>=q.y&&p.y<=q.y+q.h){hit=i;break}}
+    PLAN.sel=hit;if(hit!=null){start={px:p.x,py:p.y,ox:PLAN.items[hit].x,oy:PLAN.items[hit].y};c.setPointerCapture(e.pointerId)}planDraw()});
+  c.addEventListener('pointermove',e=>{if(!start||PLAN.sel==null)return;const p=pos(e);const it=PLAN.items[PLAN.sel];it.x=Math.round(start.ox+p.x-start.px);it.y=Math.round(start.oy+p.y-start.py);PLAN.dirty=true;planDraw()});
+  const end=()=>{start=null};c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+  window.addEventListener('resize',()=>{if(PLAN.room&&$('t-plan').classList.contains('on'))planDraw()})})();
 
 /* ===================== 摘要 / 設定 ===================== */
 function summaryText(){const f=DB.flats.find(x=>x.id===curFlat);if(!f)return '';const rooms=roomsOf(f.id),L=[];
