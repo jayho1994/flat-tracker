@@ -48,7 +48,7 @@
   .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:flex-end}
   .sheet.on{display:flex}
   .panel{background:#fff;width:100%;max-height:calc(100vh - env(safe-area-inset-top) - 28px);overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
-  .panel h2{margin-top:0}
+  .panel h2{margin-top:0}.panel .topbar{margin-bottom:12px}
   .stack{display:flex;flex-direction:column;gap:8px}
   .split{display:flex;gap:8px}.split>*{flex:1;min-width:0}
   .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90vw;text-align:center}
@@ -171,7 +171,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v2.1 · 2026-09-09</p>
+    <p class="hint" style="margin-top:12px">v2.2 · 2026-09-09</p>
   </section>
 </main>
 
@@ -186,7 +186,7 @@
 
 <!-- 單位表單 -->
 <div class="sheet" id="shFlat" onclick="if(event.target===this)closeSheet('shFlat')"><div class="panel">
-  <h2 id="flatTitle">新增單位</h2><input type="hidden" id="x_id">
+  <div class="topbar"><h2 id="flatTitle">新增單位</h2><button class="sm" onclick="closeSheet('shFlat')">✕ 取消</button></div><input type="hidden" id="x_id">
   <div class="stack">
     <div><label class="f">樓盤網址（28Hse／中原／美聯…貼上後按「抓取」自動填）</label>
       <div class="split"><input id="x_url" inputmode="url" autocapitalize="off" placeholder="https://www.28hse.com/..."><button class="sm tape" style="flex:0 0 auto" onclick="importUrl()">抓取</button></div>
@@ -209,14 +209,14 @@
     <div><label class="f">標籤</label><div id="x_tags"></div></div>
     <div><label class="f">代理</label><select id="x_agent"><option value="">—</option></select></div>
     <div><label class="f">備註</label><textarea id="x_note" placeholder="景觀、樓層、業主情況、代理講過的話…"></textarea></div>
-    <div class="split"><button class="primary" onclick="saveFlat()">儲存單位</button><button class="danger" id="x_del" onclick="delFlat()" style="display:none">刪除</button></div>
+    <div class="split"><button class="primary" onclick="saveFlat()">儲存單位</button><button onclick="closeSheet('shFlat')">取消</button><button class="danger" id="x_del" onclick="delFlat()" style="display:none">刪除</button></div>
     <button class="link" onclick="floorplanSearch()">🔎 Google 搜尋此單位則圖</button>
   </div>
 </div></div>
 
 <!-- 房間表單 -->
 <div class="sheet" id="shRoom" onclick="if(event.target===this)closeSheet('shRoom')"><div class="panel">
-  <h2 id="roomTitle">新增房間</h2><input type="hidden" id="r_id">
+  <div class="topbar"><h2 id="roomTitle">新增房間</h2><button class="sm" onclick="closeSheet('shRoom')">✕ 取消</button></div><input type="hidden" id="r_id">
   <div class="stack">
     <div class="split"><div><label class="f">類型</label><select id="r_type" onchange="autoRoomName()"><option>客廳</option><option>睡房</option><option>廚房</option><option>廁所</option><option>儲物室</option><option>露台</option><option>走廊</option><option>工人房</option><option>其他</option></select></div><div><label class="f">名稱</label><input id="r_name"></div></div>
     <div class="split"><div><label class="f">長 (cm)</label><input id="r_l" type="number" inputmode="decimal"></div><div><label class="f">闊 (cm)</label><input id="r_w" type="number" inputmode="decimal"></div><div><label class="f">樓底 (cm)</label><input id="r_h" type="number" inputmode="decimal"></div></div>
@@ -230,7 +230,7 @@
 
 <!-- 傢俬表單 -->
 <div class="sheet" id="shFurn" onclick="if(event.target===this)closeSheet('shFurn')"><div class="panel">
-  <h2 id="furnTitle">新增傢俬</h2><input type="hidden" id="f_id">
+  <div class="topbar"><h2 id="furnTitle">新增傢俬</h2><button class="sm" onclick="closeSheet('shFurn')">✕ 取消</button></div><input type="hidden" id="f_id">
   <div class="stack">
     <div><label class="f">名稱</label><input id="f_name"></div>
     <div class="split"><div><label class="f">長</label><input id="f_l" type="number" inputmode="decimal"></div><div><label class="f">深/闊</label><input id="f_w" type="number" inputmode="decimal"></div><div><label class="f">高</label><input id="f_h" type="number" inputmode="decimal"></div></div>
@@ -243,14 +243,14 @@
 
 <!-- 傢俬匯入 -->
 <div class="sheet" id="shImport" onclick="if(event.target===this)closeSheet('shImport')"><div class="panel">
-  <h2>貼上傢俬清單</h2><p class="hint">每行：<span class="mono">名稱, 長, 闊, 高</span>（cm）</p>
+  <div class="topbar"><h2>貼上傢俬清單</h2><button class="sm" onclick="closeSheet('shImport')">✕ 取消</button></div><p class="hint">每行：<span class="mono">名稱, 長, 闊, 高</span>（cm）</p>
   <textarea id="importBox" class="mono" style="min-height:150px"></textarea>
   <div class="split" style="margin-top:10px"><button class="primary" onclick="doImportFurn()">匯入</button><button onclick="closeSheet('shImport')">取消</button></div>
 </div></div>
 
 <!-- 代理表單 -->
 <div class="sheet" id="shContact" onclick="if(event.target===this)closeSheet('shContact')"><div class="panel">
-  <h2 id="contactTitle">新增代理／聯絡人</h2><input type="hidden" id="c_id">
+  <div class="topbar"><h2 id="contactTitle">新增代理／聯絡人</h2><button class="sm" onclick="closeSheet('shContact')">✕ 取消</button></div><input type="hidden" id="c_id">
   <div class="stack">
     <div class="split"><div><label class="f">姓名</label><input id="c_name"></div><div style="flex:0 0 110px"><label class="f">角色</label><select id="c_role"><option>代理</option><option>業主</option><option>管理處</option><option>其他</option></select></div></div>
     <div class="split"><div><label class="f">公司</label><input id="c_co"></div><div><label class="f">電話</label><input id="c_tel" inputmode="tel"></div></div>
@@ -263,7 +263,7 @@
 
 <!-- 出價表單 -->
 <div class="sheet" id="shOffer" onclick="if(event.target===this)closeSheet('shOffer')"><div class="panel">
-  <h2 id="offerTitle">記錄出價／要求</h2><input type="hidden" id="o_id">
+  <div class="topbar"><h2 id="offerTitle">記錄出價／要求</h2><button class="sm" onclick="closeSheet('shOffer')">✕ 取消</button></div><input type="hidden" id="o_id">
   <div class="stack">
     <div class="split"><div><label class="f">類型</label><select id="o_type"><option>我方出價</option><option>對方還價</option><option>我方要求</option><option>對方回覆</option><option>口頭承諾</option><option>備忘</option></select></div><div><label class="f">日期</label><input id="o_date" type="date"></div></div>
     <div class="split"><div><label class="f">金額</label><input id="o_amt" type="number" inputmode="numeric"></div><div><label class="f">狀態</label><select id="o_status"><option>待回覆</option><option>接受</option><option>拒絕</option><option>部分接受</option><option>已撤回</option></select></div><div><label class="f">誰跟進</label><select id="o_who"><option>Jay</option><option>太太</option><option>代理</option></select></div></div>
@@ -435,7 +435,7 @@ async function importUrl(){
     fill('x_src',p.業主自讓?'業主自讓':p.來源);fill('x_rent',p.叫價);fill('x_sqft',p.實用呎);fill('x_gross',p.建築呎);fill('x_rooms',p.房數);fill('x_toilets',p.廁所數);fill('x_age',p.樓齡);fill('x_facing',p.座向);fill('x_mgmt',p.管理費);fill('x_listed',p.刊登日期);fill('x_estate',p.屋苑);fill('x_block',p.座);fill('x_floor',p.樓層);fill('x_bldg',p.大廈);fill('x_addr',p.地址);fill('x_dist',p.分區);fill('x_area',p.地區);fill('x_sale',p.售價);
     if(p.標題&&!$('x_note').value)$('x_note').value='[網頁標題] '+p.標題+(p.描述?'\n'+p.描述.slice(0,300):'');
     const got=['屋苑','大廈','座','地址','分區','叫價','售價','實用呎','房數','樓齡'].filter(k=>p[k]!=null);
-    $('importMsg').textContent=(p.warning?'⚠ '+p.warning+' ':'')+'已抓到：'+(got.join('、')||'無可用欄位，請人手填')+'。'+(p.叫價?'':'⚠ 未抓到月租，請人手填。')+'請核對。';
+    $('importMsg').innerHTML=esc((p.warning?'⚠ '+p.warning+' ':'')+'已抓到：'+(got.join('、')||'無可用欄位，請人手填')+'。'+(p.叫價?'':'⚠ 未抓到月租，請人手填。')+'請核對。')+(p.raw?`<details style="margin-top:4px"><summary style="font-size:12px">診斷</summary><div class="mono" style="font-size:11px;word-break:break-all">title: ${esc(p.raw.title||'—')}<br>h1: ${esc(p.raw.h1||'—')}<br>json: ${esc(JSON.stringify(p.raw.json||{}))}<br>ld: ${p.raw.ldCount} · ${p.raw.bytes||'?'} bytes</div></details>`:'');
     suggestStack();
   }catch(e){$('importMsg').textContent='抓取失敗：'+e.message}
 }
