@@ -44,6 +44,7 @@ const CORS = {
 export const SCHEMAS = {
   flats: {
     名稱: "title", 階段: "select", 屋苑: "rich_text", 座: "rich_text", 樓層: "rich_text", 單位: "rich_text",
+    大廈: "rich_text", 地址: "rich_text", 分區: "rich_text", 售價: "number",
     地區: "select", 來源: "select", 來源連結: "url", 叫價: "number", 實用呎: "number", 建築呎: "number",
     房數: "number", 廁所數: "number", 樓齡: "number", 座向: "select", 管理費: "number", 差餉季度: "number",
     包項目: "multi_select", 租期: "rich_text", 免租期日: "number", 交樓日: "date", 刊登日期: "date", 睇樓日期: "date",
@@ -135,39 +136,128 @@ async function updateOne(kind, id, data) { return fromPage(await notion("PATCH",
 async function archiveOne(id) { await notion("PATCH", `/pages/${id}`, { archived: true }); return { id, archived: true }; }
 async function getPage(id) { return fromPage(await notion("GET", `/pages/${id}`)); }
 
-/* ---------- 樓盤網頁解析（28Hse / 中原 / 通用） ---------- */
-export function parseListing(html, url) {
-  const out = { 來源連結: url, 來源: /28hse/i.test(url) ? "28Hse" : /centanet|中原/i.test(url) ? "中原" : /midland/i.test(url) ? "美聯" : /squarefoot/i.test(url) ? "Squarefoot" : /spacious/i.test(url) ? "Spacious" : "其他", raw: {} };
-  const ld = [];
-  for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
-    try { ld.push(JSON.parse(m[1].trim())); } catch { /* ignore */ }
+/* ---------- 樓盤網頁解析（28Hse / 中原 / 美聯 / 通用） ---------- */
+const DISTRICTS = {
+  港島: ["太古","鰂魚涌","北角","炮台山","天后","銅鑼灣","灣仔","金鐘","中環","上環","西環","堅尼地城","西營盤","石塘咀","半山","山頂","跑馬地","大坑","筲箕灣","西灣河","杏花邨","柴灣","小西灣","香港仔","鴨脷洲","黃竹坑","薄扶林","數碼港","赤柱","淺水灣","深水灣"],
+  九龍: ["尖沙咀","尖東","佐敦","油麻地","旺角","太子","大角咀","深水埗","長沙灣","荔枝角","美孚","石硤尾","九龍塘","何文田","土瓜灣","紅磡","黃埔","九龍城","啟德","新蒲崗","鑽石山","黃大仙","樂富","慈雲山","彩虹","九龍灣","牛頭角","觀塘","藍田","油塘"],
+  新界: ["荃灣","葵涌","葵芳","青衣","深井","沙田","火炭","大圍","馬鞍山","大埔","太和","粉嶺","上水","元朗","天水圍","錦田","屯門","將軍澳","坑口","調景嶺","寶琳","日出康城","西貢","清水灣"],
+  離島: ["東涌","愉景灣","長洲","南丫島","坪洲","梅窩","馬灣"],
+};
+const JUNK_ESTATE = /^(一手|新盤|樓盤|搵樓|買樓|租樓|租屋|物業|屋苑|首頁|香港|網上|全部|地產|中原|美聯|28Hse)/i;
+const toNum = (x) => Number(String(x).replace(/[^\d.]/g, ""));
+// SPA 網站（中原／美聯）的資料多藏在頁內 JSON（__NEXT_DATA__ / __NUXT__ / window.__INITIAL_STATE__）；按常見 key 抽取
+const JSON_KEYS = {
+  rent: ["rent", "rental", "rentPrice", "rent_price", "monthlyRent", "rentalPrice", "price_rent", "leasePrice"],
+  sale: ["salePrice", "sale_price", "sellPrice", "price_sale", "askingPrice"],
+  estate: ["estateName", "estate_name", "estateNameZh", "estateNameTc", "estName", "estateNameChi"],
+  building: ["buildingName", "building_name", "bldgName", "buildingNameZh", "buildingNameTc", "phaseName", "phaseNameZh"],
+  block: ["blockName", "block_name", "blockNameZh", "towerName"],
+  floor: ["floorZone", "floor_zone", "floorLevel", "floorZoneZh", "floorLevelZh"],
+  district: ["districtName", "district_name", "districtNameZh", "areaName", "subDistrictName", "regionName"],
+  address: ["streetAddress", "addressZh", "fullAddress", "address_zh", "addressTc", "address"],
+  saleable: ["saleableArea", "saleable_area", "netArea", "net_area", "usableArea", "saleableAreaSqft"],
+  gross: ["grossArea", "gross_area", "grossFloorArea", "grossAreaSqft"],
+  rooms: ["bedroom", "bedrooms", "numBedroom", "bedroomCount", "roomCount"],
+  baths: ["bathroom", "bathrooms", "numBathroom", "bathroomCount"],
+  age: ["buildingAge", "building_age", "propertyAge"],
+};
+function sniffJSON(html) {
+  const out = {};
+  const unesc = (v) => { try { return JSON.parse('"' + v + '"'); } catch { return v; } };
+  for (const [field, keys] of Object.entries(JSON_KEYS)) {
+    for (const k of keys) {
+      const m = html.match(new RegExp('[\'"]?\\b' + k + '[\'"]?\\s*:\\s*(?:"([^"]{1,80})"|\'([^\']{1,80})\'|(-?[\\d.]+))', "i"));
+      if (m) { const v = m[1] != null ? unesc(m[1]).trim() : m[2] != null ? m[2].trim() : Number(m[3]); if (v !== "" && v !== 0 && v !== "0" && v !== "null" && !Number.isNaN(v)) { out[field] = v; break; } }
+    }
   }
+  return out;
+}
+export function parseListing(html, url) {
+  const src = /28hse/i.test(url) ? "28Hse" : /centanet|中原/i.test(url) ? "中原" : /midland/i.test(url) ? "美聯" : /squarefoot/i.test(url) ? "Squarefoot" : /spacious/i.test(url) ? "Spacious" : "其他";
+  const out = { 來源連結: url, 來源: src, raw: {} };
+  const ld = [];
+  for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) { try { ld.push(JSON.parse(m[1].trim())); } catch { /* ignore */ } }
   out.raw.ldCount = ld.length;
   const flat = (x) => (Array.isArray(x) ? x : x && x["@graph"] ? x["@graph"] : [x]).filter(Boolean);
+  let ldPrice = null; const ldPrices = [];
   for (const node of ld.flatMap(flat)) {
     if (node.name && !out.標題) out.標題 = String(node.name).trim();
     if (node.description && !out.描述) out.描述 = String(node.description).trim().slice(0, 1500);
     const offer = node.offers || (node["@type"] === "Offer" ? node : null);
-    if (offer && offer.price && !out.叫價) out.叫價 = Number(String(offer.price).replace(/[^\d.]/g, ""));
-    if (node.floorSize && node.floorSize.value && !out.實用呎) out.實用呎 = Number(node.floorSize.value);
-    if (node.numberOfRooms && !out.房數) out.房數 = Number(node.numberOfRooms);
-    if (node.numberOfBathroomsTotal && !out.廁所數) out.廁所數 = Number(node.numberOfBathroomsTotal);
+    for (const of of (Array.isArray(node.offers) ? node.offers : node.offers ? [node.offers] : (node["@type"] === "Offer" ? [node] : []))) { if (of && of.price) { const v = toNum(of.price); ldPrices.push(v); if (ldPrice == null) ldPrice = v; } }
+    if (node.floorSize && node.floorSize.value && !out.實用呎) out.實用呎 = toNum(node.floorSize.value);
+    if (node.numberOfRooms && !out.房數) out.房數 = toNum(node.numberOfRooms);
+    if (node.numberOfBathroomsTotal && !out.廁所數) out.廁所數 = toNum(node.numberOfBathroomsTotal);
     if (node.datePosted && !out.刊登日期) out.刊登日期 = String(node.datePosted).slice(0, 10);
+    if (node.address) { const a = typeof node.address === "string" ? node.address : node.address.streetAddress; if (a && !out.地址) out.地址 = String(a).trim(); }
   }
-  const t = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
-  const og = html.match(/property=["']og:title["'][^>]*content=["']([^"']+)/i); if (og && !out.標題) out.標題 = og[1];
-  if (!out.叫價) { const m = t.match(/(?:租|月租|租金)[^\d$]{0,12}\$?\s*([\d,]{4,7})/); if (m) out.叫價 = Number(m[1].replace(/,/g, "")); }
-  if (!out.實用呎) { const m = t.match(/實用[^\d]{0,8}([\d,]{2,5})\s*(?:呎|平方呎|sq)/i); if (m) out.實用呎 = Number(m[1].replace(/,/g, "")); }
-  { const m = t.match(/建築[^\d]{0,8}([\d,]{2,5})\s*(?:呎|平方呎|sq)/i); if (m) out.建築呎 = Number(m[1].replace(/,/g, "")); }
-  if (!out.房數) { const m = t.match(/(\d)\s*房/); if (m) out.房數 = Number(m[1]); }
-  if (!out.廁所數) { const m = t.match(/(\d)\s*(?:廁|浴|衛)/); if (m) out.廁所數 = Number(m[1]); }
-  { const m = t.match(/樓齡[^\d]{0,6}(\d{1,2})/); if (m) out.樓齡 = Number(m[1]); }
+  // 標題：<title> 優先（最穩定），去除網站尾巴
+  const sj = sniffJSON(html); out.raw.json = sj;
+  const tt = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const og = html.match(/property=["']og:title["'][^>]*content=["']([^"']+)/i);
+  const h1m = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  const h1 = h1m ? h1m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
+  out.raw.title = tt ? tt[1].replace(/\s+/g, " ").trim() : null; out.raw.h1 = h1 || null;
+  let title = (tt ? tt[1] : og ? og[1] : out.標題 || "").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  { const segs = title.split(/\s*[|｜]\s*|\s+-\s+/).map((x) => x.replace(/\s*(買樓|租樓|租屋|出租|放售|出售|樓盤|物業|放盤|詳細資料)\s*/g, " ").trim()).filter((x) => x && !/中原|美聯|28Hse|香港屋網|Squarefoot|Spacious|Centaline|Midland/i.test(x));
+    title = segs.sort((a, b) => b.length - a.length)[0] || ""; }
+  if (title) out.標題 = title;
+  // 屋苑／大廈／座：由標題拆解，重複詞去重（中原：「太古城 太古城 安盛台 建安閣 (31座)」）
+  if (title) {
+    const toks = title.split(/\s+/).filter((x, i, a) => x && a.indexOf(x) === i);
+    const blk = title.match(/(\d{1,3})\s*座/); if (blk) out.座 = blk[1] + "座";
+    const rest = toks.filter((x) => !/座\)?$/.test(x) && !/^\(/.test(x) && !JUNK_ESTATE.test(x) && !/^(高|中|低)層$|^\d+(房|廁|浴|衛|呎)|呎$|^[\d,$#]+$|^#|^(開揚|海景|山景|靚裝|連車位|全新|罕有|租盤|售盤|放盤|詳細資料|物業資料|樓盤資料|出租|出售)/.test(x));
+    if (rest.length) { out.屋苑 = rest[0].replace(/[()（）]/g, ""); if (rest.length > 1) out.大廈 = rest.slice(1).join(" ").replace(/[()（）]/g, "").trim(); }
+  }
+  // 頁內 JSON 優先覆蓋（較標題可靠）；h1 作屋苑後備
+  if (sj.estate) { out.屋苑 = String(sj.estate); }
+  else if (h1 && !JUNK_ESTATE.test(h1) && (!out.屋苑 || out.屋苑.length < 2)) out.屋苑 = h1.split(/\s+/)[0];
+  if (sj.building) out.大廈 = String(sj.building).replace(/\s*\(\d+座\)/, "").trim();
+  if (sj.block) { const b = String(sj.block).match(/(\d{1,3})/); if (b) out.座 = b[1] + "座"; }
+  if (sj.floor) { const f = String(sj.floor).match(/(高|中|低)/); if (f) out.樓層 = f[1] + "層"; }
+  if (sj.district) out.分區JSON = String(sj.district);
+  if (sj.address) out.地址 = String(sj.address).replace(/\s+/g, "");
+  if (sj.saleable) out.實用呎 = Number(sj.saleable); if (sj.gross) out.建築呎 = Number(sj.gross);
+  if (sj.rooms) out.房數 = Number(sj.rooms); if (sj.baths) out.廁所數 = Number(sj.baths); if (sj.age) out.樓齡 = Number(sj.age);
+  const t = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+  // 價錢：租 與 售 分開；租金合理範圍 3,000–500,000；「萬」一律視為售價
+  const rents = [...t.matchAll(/(?:租金|月租|租)\s*[:：]?\s*(?:HK)?\$?\s*([\d,]{4,7})(?!\s*萬)/g)].map((m) => toNum(m[1])).filter((v) => v >= 3000 && v <= 500000);
+  if (rents.length) out.叫價 = rents[0];
+  const sale = t.match(/售\s*[:：]?\s*(?:HK)?\$?\s*([\d,.]+)\s*萬/); if (sale) out.售價 = Math.round(toNum(sale[1]) * 10000);
+  if (!out.叫價 && sj.rent && Number(sj.rent) >= 3000 && Number(sj.rent) <= 500000) out.叫價 = Number(sj.rent);
+  if (!out.叫價) { const inRange = ldPrices.filter((v) => v >= 3000 && v <= 500000); if (inRange.length) out.叫價 = inRange[0]; }
+  // 後備：原始 HTML 內「租」／rent 附近 3,000–500,000 的數字，取出現次數最多者
+  { const freq = new Map(); const ctx = [];
+    for (const m of html.matchAll(/(?:rent(?:al)?(?:Price|_price)?|租金|月租|租)[^\d\n]{0,30}?(\d{1,3}(?:,\d{3})+|\d{4,6})(?!\d|,\d|\s*萬)/gi)) {
+      const v = toNum(m[1]); if (v >= 3000 && v <= 500000) { freq.set(v, (freq.get(v) || 0) + 1); if (ctx.length < 6) ctx.push(html.slice(Math.max(0, m.index - 25), m.index + m[0].length + 5).replace(/\s+/g, " ")); }
+    }
+    out.raw.rentCtx = ctx; out.raw.rentCandidates = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (!out.叫價 && freq.size) out.叫價 = out.raw.rentCandidates[0][0]; }
+  if (!out.售價 && sj.sale && Number(sj.sale) > 1000000) out.售價 = Number(sj.sale);
+  if (ldPrice != null) { if (!out.叫價 && ldPrice >= 3000 && ldPrice <= 500000) out.叫價 = ldPrice; else if (!out.售價 && ldPrice > 1000000) out.售價 = ldPrice; }
+  if (!out.實用呎) { const m = t.match(/實用[^\d]{0,10}([\d,]{2,5})\s*(?:呎|平方呎|sq)/i); if (m) out.實用呎 = toNum(m[1]); }
+  { const m = t.match(/建築[^\d]{0,10}([\d,]{2,5})\s*(?:呎|平方呎|sq)/i); if (m) out.建築呎 = toNum(m[1]); }
+  if (!out.房數) { const m = t.match(/(\d)\s*房(?!價|屋)/); if (m) out.房數 = toNum(m[1]); }
+  if (!out.廁所數) { const m = t.match(/(\d)\s*(?:廁|浴|衛)/); if (m) out.廁所數 = toNum(m[1]); }
+  { const m = t.match(/樓齡[^\d]{0,6}(\d{1,2})/); if (m) out.樓齡 = toNum(m[1]); }
   { const m = t.match(/座向[^\u4e00-\u9fa5]{0,4}(東南|西南|東北|西北|東|南|西|北)/); if (m) out.座向 = m[1]; }
-  { const m = t.match(/管理費[^\d]{0,8}\$?\s*([\d,]{3,6})/); if (m) out.管理費 = Number(m[1].replace(/,/g, "")); }
+  { const m = t.match(/管理費[^\d]{0,10}\$?\s*([\d,]{3,6})/); if (m) out.管理費 = toNum(m[1]); }
   if (/業主(自讓|放盤|直讓)/.test(t)) out.業主自讓 = true;
-  { const m = t.match(/(?:屋苑|大廈|物業)[:：]?\s*([\u4e00-\u9fa5A-Za-z0-9·]{2,20})/); if (m) out.屋苑 = m[1]; }
-  { const m = t.match(/(\d{1,2})\s*座/); if (m) out.座 = m[1] + "座"; }
+  if (!out.座) { const m = t.match(/(\d{1,3})\s*座/); if (m) out.座 = m[1] + "座"; }
   { const m = t.match(/(高|中|低)層/); if (m) out.樓層 = m[1] + "層"; }
+  if (!out.地址) { const m = t.match(/([\u4e00-\u9fa5]{1,10}(?:道|路|街|里|徑|巷|坊|圍|灣)\s*\d{1,4}\s*號?(?:[A-Z]|-\d+號?)?)/); if (m) out.地址 = m[1].replace(/\s+/g, "").replace(/^(位於|地址|座落|坐落)/, ""); }
+  if (out.地址) { for (const names of Object.values(DISTRICTS)) for (const nme of names) if (out.地址.startsWith(nme) && out.地址.length > nme.length + 3) { out.地址 = out.地址.slice(nme.length); } }
+  // 分區：優先在標題／地址附近出現者，否則全文最早出現者
+  const head = [out.標題 || "", out.地址 || "", out.屋苑 || ""].join(" ");
+  let best = null;
+  for (const [region, names] of Object.entries(DISTRICTS)) for (const nme of names) {
+    let pos = head.indexOf(nme); let w = 0;
+    if (pos < 0) { pos = t.indexOf(nme); w = 100000; }
+    if (pos >= 0 && (!best || pos + w < best.score)) best = { nme, region, score: pos + w };
+  }
+  if (out.分區JSON) { for (const [region, names] of Object.entries(DISTRICTS)) { const hit = names.find((n) => out.分區JSON.includes(n)); if (hit) { best = { nme: hit, region, score: -1 }; break; } } if (!best || best.score !== -1) out.分區 = out.分區JSON; }
+  if (best) { out.分區 = best.nme; out.地區 = best.region; }
+  delete out.分區JSON;
   return out;
 }
 async function importListing(url) {
