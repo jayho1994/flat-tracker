@@ -10,7 +10,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>睇樓資料庫</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="scene3d.js?v=50"></script>
+<script src="scene3d.js?v=51"></script>
 <style>
   :root{--ink:#1c1b18;--ink2:#4a4741;--mute:#7a7569;--paper:#f6f3ec;--card:#fffdf8;--line:#cfc7b6;--line2:#e6e0d2;--accent:#8a6d1e;--accent-2:#b8963a;--accent-soft:#f1e8cf;--ok:#2f6b3a;--bad:#a3322a;--warn:#8a6d1e;--blue:#2f4f7a;--r:12px;
     --btn-grad:linear-gradient(180deg,#fffefb 0%,#ece7da 100%);--btn-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -1px 0 rgba(0,0,0,.05) inset,0 2px 3px rgba(28,27,24,.14),0 6px 12px -6px rgba(28,27,24,.18);--btn-active:0 2px 4px rgba(0,0,0,.22) inset,0 1px 0 rgba(255,255,255,.4)}
@@ -94,7 +94,7 @@
   /* 3D 全螢幕 */
   #fs3d{position:fixed;inset:0;z-index:60;background:#eeeae1;display:none}
   #fs3d.on{display:block}
-  #fs3d #c3dWrap{position:absolute;inset:0}
+  #fs3d #c3dWrap{position:absolute!important;inset:0!important;width:100%!important;height:100%!important}
   #fs3d canvas{position:absolute;inset:0;width:100%!important;height:100%!important;border:none!important;border-radius:0!important}
   .rail{position:absolute;right:calc(10px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:3}
   .rail button{width:58px;height:58px;padding:0;border-radius:16px;font-size:12px;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(255,253,248,.92);backdrop-filter:blur(6px)}
@@ -113,7 +113,7 @@
 </style>
 </head>
 <body>
-<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v5.0</span></h1><span class="st" id="syncSt">—</span></header>
+<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v5.1</span></h1><span class="st" id="syncSt">—</span></header>
 
 <main>
   <!-- 看板 -->
@@ -226,7 +226,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v5.0 · 2026-09-16</p>
+    <p class="hint" style="margin-top:12px">v5.1 · 2026-09-16</p>
   </section>
 </main>
 
@@ -833,7 +833,7 @@ function s3dRenderCost(){const el=$('s3dCost');if(!el)return;const placed=S3.lay
   if($('fsCost'))$('fsCost').textContent=money(tot)+' · '+buy.length+' 件';
   el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline"><span>已放入擬購／IKEA ${buy.length} 件</span><b class="num" style="font-size:20px">${money(tot)}</b></div>${Object.keys(byRoom).length?`<div class="sub">${Object.entries(byRoom).map(([k,v])=>esc(k)+' '+money(v)).join(' · ')}</div>`:''}${buy.some(f=>!f.價錢)?'<div class="sub">有項目未填價錢，總額偏低。</div>':''}${S3.dirty?'<div class="sub" style="color:var(--bad)">佈局未儲存</div>':''}`}
 function s3dMode(m){if(!S3.ready)return;S3D.setMode(m);S3.mode=m;$('joy').style.display=m==='walk'?'':'none';$('b3dOrbit').style.background=m==='orbit'?'var(--accent-soft)':'';$('b3dWalk').style.background=m==='walk'?'var(--accent-soft)':'';$('rOrbit').classList.toggle('on',m==='orbit');$('rWalk').classList.toggle('on',m==='walk')}
-function s3dFull(on){const wrap=$('c3dWrap');if(on){$('fs3d').appendChild(wrap);$('fs3d').classList.add('on');document.body.classList.add('fs3d-on');S3.full=true;const f=DB.flats.find(x=>x.id===curFlat);$('fsTitle').textContent=f?flatTitle(f):'3D';s3dFit();s3dRenderCost();s3dRenderSel(S3D.selected()?S3.layout.items.indexOf(S3D.selected()):null)}
+function s3dFull(on){const wrap=$('c3dWrap');if(on){$('fs3d').appendChild(wrap);$('fs3d').classList.add('on');document.body.classList.add('fs3d-on');S3.full=true;const f=DB.flats.find(x=>x.id===curFlat);$('fsTitle').textContent=f?flatTitle(f):'3D';requestAnimationFrame(()=>{s3dFit();setTimeout(s3dFit,120)});s3dRenderCost();s3dRenderSel(S3D.selected()?S3.layout.items.indexOf(S3D.selected()):null)}
   else{$('c3dHome').appendChild(wrap);$('fs3d').classList.remove('on');document.body.classList.remove('fs3d-on');S3.full=false;s3dDrawer(null);S3D.resize()}}
 function s3dFit(){if(!S3.ready)return;if(S3.full)S3D.resize(window.innerWidth,window.innerHeight);else S3D.resize()}
 window.addEventListener('resize',()=>{if(S3.ready)s3dFit()});

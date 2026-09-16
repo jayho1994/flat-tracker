@@ -93,14 +93,16 @@
     const canvas = opt.canvas; const model = opt.model; const H = (model.ceiling || 240) * M;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; renderer.physicallyCorrectLights = false;
-    const scene = new THREE.Scene(); scene.background = new THREE.Color(0xeeeae1); scene.environment = makeEnv(renderer);
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0xeeeae1);
     const camera = new THREE.PerspectiveCamera(58, 1, 0.05, 120);
-    scene.add(new THREE.HemisphereLight(0xfff7e8, 0xcfc7b8, 0.55));
+    const hemi = new THREE.HemisphereLight(0xfff7e8, 0xcfc7b8, 0.6); scene.add(hemi); const amb = new THREE.AmbientLight(0xffffff, 0.25); scene.add(amb);
     const sun = new THREE.DirectionalLight(0xfff1dc, 1.1); sun.position.set(7, 10, 5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -9; sun.shadow.camera.right = 9; sun.shadow.camera.top = 9; sun.shadow.camera.bottom = -9; sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02; scene.add(sun);
     const fill = new THREE.DirectionalLight(0xdfe8f5, 0.35); fill.position.set(-6, 6, -4); scene.add(fill);
-    st = { renderer, scene, camera, model, H, layout: opt.layout || { items: [], mat: {} }, furniture: opt.furniture || [], onSelect: opt.onSelect, onChange: opt.onChange, imgProxy: opt.imgProxy, canvas, mode: 'orbit', sel: null, meshes: [], walls: [], ceilOn: false, photos: opt.photos !== false, size: null };
+    st = { renderer, scene, camera, model, H, layout: opt.layout || { items: [], mat: {} }, furniture: opt.furniture || [], onSelect: opt.onSelect, onChange: opt.onChange, imgProxy: opt.imgProxy, canvas, mode: 'orbit', sel: null, meshes: [], walls: [], ceilOn: false, photos: opt.photos !== false, size: null, hemi, amb, frame: 0, envChecked: false };
     st.layout.mat = st.layout.mat || {}; st.layout.items = st.layout.items || [];
-    S3D.resize(opt.width, opt.height); buildFlat(); buildFurniture(); setupControls(); fitCamera(); loop(); return S3D;
+    S3D.resize(opt.width, opt.height);
+    try { scene.environment = makeEnv(renderer); } catch (e) { console.warn('env failed', e); scene.environment = null; hemi.intensity = 0.95; }
+    buildFlat(); buildFurniture(); setupControls(); fitCamera(); loop(); return S3D;
   };
 
   function buildFlat() {
@@ -169,7 +171,11 @@
       else if (!moved && ptrs.size === 0 && Date.now() - downAt < 600) { const hit = pick(e.clientX, e.clientY); st.sel = hit ? hit.userData.idx : null; highlight(); st.onSelect && st.onSelect(st.sel); } if (ptrs.size === 0) last = null; };
     c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
     c.addEventListener('wheel', e => { e.preventDefault(); if (st.mode === 'orbit') { st.orbit.dist = Math.min(40, Math.max(1.2, st.orbit.dist * (1 + e.deltaY * 0.001))); applyOrbit(); } }, { passive: false }); }
-  function loop() { st.raf = requestAnimationFrame(loop); if (st.mode === 'walk' && st.walk && (st.walk.vx || st.walk.vz)) { const w = st.walk, sp = 0.035; w.x += (Math.sin(w.yaw) * -w.vz + Math.cos(w.yaw) * w.vx) * sp; w.z += (Math.cos(w.yaw) * -w.vz - Math.sin(w.yaw) * w.vx) * sp; applyWalk(); } st.renderer.render(st.scene, st.camera); }
+  function checkDark() { // 首幾幀取樣：若畫面幾乎全黑，關閉環境反射並補光（某些 iOS WebGL 的 PMREM 會產生 NaN）
+    try { const gl = st.renderer.getContext(); const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight; const px = new Uint8Array(4); let bright = 0; const pts = [[0.5, 0.5], [0.3, 0.6], [0.7, 0.6], [0.5, 0.35], [0.4, 0.75]];
+      for (const [fx, fy] of pts) { gl.readPixels(Math.floor(W * fx), Math.floor(H * (1 - fy)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); if (px[0] + px[1] + px[2] > 60) bright++; }
+      if (bright <= 1 && st.scene.environment) { st.scene.environment = null; st.hemi.intensity = 0.95; st.amb.intensity = 0.4; st.renderer.toneMapping = THREE.NoToneMapping; st.scene.traverse(o => { if (o.isMesh && o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.envMap = null; m.needsUpdate = true; }); }); console.warn('S3D: environment disabled (dark frame detected)'); st.envDisabled = true; } } catch (e) { /* ignore */ } }
+  function loop() { st.raf = requestAnimationFrame(loop); st.frame++; if (!st.envChecked && st.frame === 4) { st.envChecked = true; checkDark(); } if (st.mode === 'walk' && st.walk && (st.walk.vx || st.walk.vz)) { const w = st.walk, sp = 0.035; w.x += (Math.sin(w.yaw) * -w.vz + Math.cos(w.yaw) * w.vx) * sp; w.z += (Math.cos(w.yaw) * -w.vz - Math.sin(w.yaw) * w.vx) * sp; applyWalk(); } st.renderer.render(st.scene, st.camera); }
 
   /* ---------- 對外操作 ---------- */
   S3D.add = function (fid, roomId) { const f = st.furniture.find(x => x.id === fid); if (!f) return; const room = st.model.rooms.find(r => r.id === roomId) || st.model.rooms[0]; const [x1, y1, x2, y2] = room.rects[0]; st.layout.items.push({ f: fid, x: Math.round((x1 + x2) / 2 - f.長 / 2), y: Math.round((y1 + y2) / 2 - f.闊 / 2), rot: 0 }); st.sel = st.layout.items.length - 1; buildFurniture(); st.onChange && st.onChange(); st.onSelect && st.onSelect(st.sel); };
