@@ -55,7 +55,7 @@ export const SCHEMAS = {
     名稱: "title", 單位: "relation", 類型: "select", 長: "number", 闊: "number", 高: "number", 門闊: "number", 門高: "number",
     窗台深: "number", 冷氣位: "rich_text", 電掣位: "rich_text", 其他尺寸: "rich_text", 備註: "rich_text", 佈局: "rich_text",
   },
-  furniture: { 名稱: "title", 長: "number", 闊: "number", 高: "number", 所屬: "select", 狀態: "select", 可拆件: "checkbox", 開門方式: "select", 開門深度: "number", 品牌: "select", 價錢: "number", 貨號: "rich_text", 產品連結: "url", 圖片: "url", 顏色: "rich_text", 材質: "rich_text", 備註: "rich_text" },
+  furniture: { 名稱: "title", 長: "number", 闊: "number", 高: "number", 所屬: "select", 狀態: "select", 可拆件: "checkbox", 開門方式: "select", 開門深度: "number", 形態: "select", 品牌: "select", 價錢: "number", 貨號: "rich_text", 產品連結: "url", 圖片: "url", 顏色: "rich_text", 材質: "rich_text", 備註: "rich_text" },
   contacts: { 姓名: "title", 角色: "select", 公司: "rich_text", 電話: "phone_number", WhatsApp: "url", 佣金: "rich_text", 評價: "select", 最後聯絡: "date", 備註: "rich_text" },
   offers: { 摘要: "title", 單位: "relation", 日期: "date", 類型: "select", 金額: "number", 要求項目: "multi_select", 狀態: "select", 誰跟進: "select", 經誰: "relation", 詳情: "rich_text" },
   checks: {

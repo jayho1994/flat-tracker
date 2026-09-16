@@ -10,7 +10,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>睇樓資料庫</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="scene3d.js?v=40"></script>
+<script src="scene3d.js?v=50"></script>
 <style>
   :root{--ink:#1c1b18;--ink2:#4a4741;--mute:#7a7569;--paper:#f6f3ec;--card:#fffdf8;--line:#cfc7b6;--line2:#e6e0d2;--accent:#8a6d1e;--accent-2:#b8963a;--accent-soft:#f1e8cf;--ok:#2f6b3a;--bad:#a3322a;--warn:#8a6d1e;--blue:#2f4f7a;--r:12px;
     --btn-grad:linear-gradient(180deg,#fffefb 0%,#ece7da 100%);--btn-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -1px 0 rgba(0,0,0,.05) inset,0 2px 3px rgba(28,27,24,.14),0 6px 12px -6px rgba(28,27,24,.18);--btn-active:0 2px 4px rgba(0,0,0,.22) inset,0 1px 0 rgba(255,255,255,.4)}
@@ -91,10 +91,29 @@
   .num{font-variant-numeric:tabular-nums}
   .grp{margin:6px 0 4px;font-size:12px;color:var(--mute);letter-spacing:.06em}
   @media (min-width:600px){.col{flex:0 0 240px}}
+  /* 3D 全螢幕 */
+  #fs3d{position:fixed;inset:0;z-index:60;background:#eeeae1;display:none}
+  #fs3d.on{display:block}
+  #fs3d #c3dWrap{position:absolute;inset:0}
+  #fs3d canvas{position:absolute;inset:0;width:100%!important;height:100%!important;border:none!important;border-radius:0!important}
+  .rail{position:absolute;right:calc(10px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:3}
+  .rail button{width:58px;height:58px;padding:0;border-radius:16px;font-size:12px;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(255,253,248,.92);backdrop-filter:blur(6px)}
+  .rail button.on{background:linear-gradient(180deg,#34322d,#1c1b18);color:#efe2b8;border-color:#1c1b18}
+  .rail button .ic{font-size:20px}
+  .fsTop{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:3;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 100px)}
+  .fsTop .pill{background:rgba(28,27,24,.82);color:#efe2b8;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;backdrop-filter:blur(6px)}
+  .fsSel{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(58px + env(safe-area-inset-top));z-index:3;background:rgba(255,253,248,.94);border:1px solid var(--line);border-radius:14px;padding:10px 12px;max-width:min(78vw,340px);backdrop-filter:blur(6px);box-shadow:0 6px 16px -8px rgba(0,0,0,.35)}
+  .fsSel .split button{min-height:40px;font-size:13px;padding:6px 8px}
+  .drawer{position:absolute;left:0;right:0;bottom:0;z-index:4;background:rgba(246,243,236,.97);border-top:1px solid var(--line);border-radius:18px 18px 0 0;max-height:52%;overflow:auto;padding:12px 14px calc(14px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .22s ease;box-shadow:0 -8px 24px rgba(0,0,0,.2)}
+  .drawer.on{transform:none}
+  .drawer .topbar{margin-bottom:8px}
+  #fs3d #joy{left:calc(16px + env(safe-area-inset-left));bottom:calc(20px + env(safe-area-inset-bottom));width:120px;height:120px;background:rgba(28,27,24,.14);border:1px solid rgba(28,27,24,.35)}
+  #fs3d #joyK{left:45px;top:45px}
+  body.fs3d-on{overflow:hidden}
 </style>
 </head>
 <body>
-<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v4.0</span></h1><span class="st" id="syncSt">—</span></header>
+<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v5.0</span></h1><span class="st" id="syncSt">—</span></header>
 
 <main>
   <!-- 看板 -->
@@ -138,10 +157,10 @@
       <div class="split" style="margin-top:8px"><button class="sm" onclick="planRotate()">旋轉 90°</button><button class="sm danger" onclick="planRemove()">移除</button><button class="sm tape" onclick="planSave()">儲存佈局</button><button class="sm" onclick="planExport()">匯出圖片</button></div>
     </div>
     <div id="t-s3d" class="tab">
-      <div class="split" style="margin-bottom:8px"><button class="sm" id="b3dOrbit" onclick="s3dMode('orbit')">環視</button><button class="sm" id="b3dWalk" onclick="s3dMode('walk')">行走</button><button class="sm" onclick="s3dCeil()">天花</button><button class="sm" onclick="s3dAR()">AR</button><button class="sm" onclick="s3dSnap()">截圖</button></div>
-      <div style="position:relative"><canvas id="c3d" style="width:100%;border:1px solid var(--line);border-radius:12px;touch-action:none;background:#f6f3ec"></canvas>
+      <div class="split" style="margin-bottom:8px"><button class="primary" onclick="s3dFull(true)">⛶ 全螢幕操作</button><button class="sm" id="b3dOrbit" onclick="s3dMode('orbit')">環視</button><button class="sm" id="b3dWalk" onclick="s3dMode('walk')">行走</button></div>
+      <div id="c3dHome" style="position:relative"><div id="c3dWrap" style="position:relative"><canvas id="c3d" style="width:100%;border:1px solid var(--line);border-radius:12px;touch-action:none;background:#f6f3ec"></canvas>
         <div id="joy" style="display:none;position:absolute;left:14px;bottom:14px;width:96px;height:96px;border-radius:50%;background:rgba(28,27,24,.15);border:1px solid rgba(28,27,24,.3);touch-action:none"><div id="joyK" style="position:absolute;left:33px;top:33px;width:30px;height:30px;border-radius:50%;background:var(--ink);opacity:.8"></div></div>
-        <div id="s3dLoading" class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(246,243,236,.8)">3D 載入中…</div></div>
+        <div id="s3dLoading" class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(246,243,236,.8)">3D 載入中…</div></div></div>
       <p class="hint">一指拖動＝旋轉，兩指＝縮放／平移；點傢俬選取，再拖動即可移位。「行走」模式：左下搖桿走動、右方拖動視線（視高 160）。</p>
       <div id="s3dSel" class="card" style="display:none"></div>
       <div class="split"><select id="s3dRoom"></select><button class="sm tape" onclick="s3dImportPlan()">匯入平面佈局</button><button class="sm" onclick="s3dSave()">儲存</button></div>
@@ -207,7 +226,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v4.0 · 2026-09-16</p>
+    <p class="hint" style="margin-top:12px">v5.0 · 2026-09-16</p>
   </section>
 </main>
 
@@ -273,6 +292,7 @@
     <div class="split"><div><label class="f">所屬</label><select id="f_room"><option value="">—</option><option>客廳</option><option>睡房</option><option>書房</option><option>BB</option><option>廚房</option><option>其他</option></select></div><div><label class="f">狀態</label><select id="f_status"><option>現有</option><option>擬購</option><option>不搬</option></select></div></div>
     <div class="split"><div><label class="f">開門方式</label><select id="f_door"><option value="">（自動推算）</option><option>無</option><option>掩門</option><option>趟門</option><option>抽屜</option><option>摺門</option></select></div><div><label class="f">開門深度 (cm)</label><input id="f_swing" type="number" inputmode="decimal" placeholder="掩門＝單扇門闊"></div></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" id="f_split" style="width:auto;min-height:0"> 可拆件</label>
+    <div class="split"><div><label class="f">3D 形態</label><select id="f_shape"><option>自動</option><option>床</option><option>高架床</option><option>BB床</option><option>梳化</option><option>衣櫃</option><option>層架</option><option>電視櫃</option><option>飯枱</option><option>書枱</option><option>梳妝台</option><option>椅</option><option>雪櫃</option><option>洗衣機</option><option>方塊</option></select></div></div>
     <div class="split"><div><label class="f">品牌</label><select id="f_brand"><option>現有</option><option>IKEA</option><option>其他</option></select></div><div><label class="f">價錢 (HKD)</label><input id="f_price" type="number" inputmode="numeric"></div></div>
     <div class="split"><div><label class="f">顏色</label><input id="f_color" placeholder="白色 / 橡木"></div><div><label class="f">貨號</label><input id="f_sku"></div></div>
     <div><label class="f">產品連結</label><input id="f_url" inputmode="url" autocapitalize="off"></div>
@@ -326,6 +346,24 @@
   </div>
 </div></div>
 
+<!-- 3D 全螢幕 -->
+<div id="fs3d">
+  <div class="fsTop"><span class="pill" id="fsTitle">3D</span><span class="pill" id="fsCost">$0</span></div>
+  <div class="fsSel" id="fsSel" style="display:none"></div>
+  <div class="rail">
+    <button id="rOrbit" onclick="s3dMode('orbit')"><span class="ic">⟳</span>環視</button>
+    <button id="rWalk" onclick="s3dMode('walk')"><span class="ic">🚶</span>行走</button>
+    <button onclick="s3dDrawer('room')"><span class="ic">⌂</span>房間</button>
+    <button onclick="s3dDrawer('furn')"><span class="ic">🛋</span>傢俬</button>
+    <button onclick="s3dDrawer('mat')"><span class="ic">🎨</span>材質</button>
+    <button onclick="s3dDrawer('cost')"><span class="ic">$</span>預算</button>
+    <button onclick="s3dCeil()"><span class="ic">⬒</span>天花</button>
+    <button onclick="s3dAR()"><span class="ic">◈</span>AR</button>
+    <button onclick="s3dSave()"><span class="ic">✓</span>儲存</button>
+    <button onclick="s3dFull(false)"><span class="ic">✕</span>離開</button>
+  </div>
+  <div class="drawer" id="fsDrawer"><div class="topbar"><h2 id="fsDrawerTitle" style="font-size:16px">傢俬</h2><button class="sm" onclick="s3dSnap()">截圖</button><button class="sm" onclick="s3dDrawer(null)">收起</button></div><div id="fsDrawerBody"></div></div>
+</div>
 <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none" onchange="photoPicked(this)">
 <div class="toast" id="toast"></div>
 
@@ -629,9 +667,9 @@ async function aiCompare(){const ids=cmpSel.filter(id=>!id.startsWith('tmp_'));i
 function renderFurn(){const el=$('furnList');if(!DB.furniture.length){el.innerHTML='<div class="empty">未有傢俬（Notion 傢俬表為空或未同步）。</div>';return}
   const groups={};DB.furniture.forEach(f=>{(groups[f.所屬||'其他']=groups[f.所屬||'其他']||[]).push(f)});
   el.innerHTML=Object.entries(groups).map(([g,l])=>`<h2>${esc(g)}</h2>`+l.map(f=>{const sw=swingOf(f);return `<div class="card tap" onclick="openFurn('${f.id}')"><h3><span>${esc(f.名稱)}</span><span><span class="tag ${f.狀態==='擬購'?'blue':f.狀態==='不搬'?'gray':'ok'}">${esc(f.狀態||'現有')}</span> <button class="sm" onclick="event.stopPropagation();arOne('${f.id}')">AR</button></span></h3><div class="dims">${f.長||'–'} × ${f.闊||'–'} × ${f.高||'–'} cm${f.可拆件?' · 可拆件':''}${sw.mode!=='無'?' · '+sw.mode+' '+sw.depth+'cm'+(sw.inferred?'（推算）':''):''}${f.備註?`<span class="ft">${esc(f.備註)}</span>`:''}</div></div>`}).join('')).join('')}
-function openFurn(id){const f=id?DB.furniture.find(x=>x.id===id):null;$('furnTitle').textContent=f?'編輯傢俬':'新增傢俬';$('f_id').value=f?f.id:'';const set=(el,v)=>$(el).value=v==null?'':v;set('f_name',f?f.名稱:'');set('f_l',f?f.長:'');set('f_w',f?f.闊:'');set('f_h',f?f.高:'');set('f_room',f?f.所屬:'');set('f_status',f?(f.狀態||'現有'):'現有');$('f_split').checked=!!(f&&f.可拆件);set('f_door',f?(f.開門方式||''):'');set('f_swing',f?f.開門深度:'');set('f_brand',f?(f.品牌||'現有'):'現有');set('f_price',f?f.價錢:'');set('f_color',f?f.顏色:'');set('f_sku',f?f.貨號:'');set('f_url',f?f.產品連結:'');set('f_img',f?f.圖片:'');set('f_note',f?f.備註:'');$('f_del').style.display=f?'':'none';$('shFurn').classList.add('on')}
+function openFurn(id){const f=id?DB.furniture.find(x=>x.id===id):null;$('furnTitle').textContent=f?'編輯傢俬':'新增傢俬';$('f_id').value=f?f.id:'';const set=(el,v)=>$(el).value=v==null?'':v;set('f_name',f?f.名稱:'');set('f_l',f?f.長:'');set('f_w',f?f.闊:'');set('f_h',f?f.高:'');set('f_room',f?f.所屬:'');set('f_status',f?(f.狀態||'現有'):'現有');$('f_split').checked=!!(f&&f.可拆件);set('f_door',f?(f.開門方式||''):'');set('f_swing',f?f.開門深度:'');set('f_brand',f?(f.品牌||'現有'):'現有');set('f_shape',f?(f.形態||'自動'):'自動');set('f_price',f?f.價錢:'');set('f_color',f?f.顏色:'');set('f_sku',f?f.貨號:'');set('f_url',f?f.產品連結:'');set('f_img',f?f.圖片:'');set('f_note',f?f.備註:'');$('f_del').style.display=f?'':'none';$('shFurn').classList.add('on')}
 async function saveFurn(){const name=$('f_name').value.trim();if(!name){toast('請輸入名稱');return}const id=$('f_id').value||tmpId(),isNew=!$('f_id').value;
-  const data={名稱:name,長:nn($('f_l').value),闊:nn($('f_w').value),高:nn($('f_h').value),所屬:$('f_room').value||inferRoom(name),狀態:$('f_status').value,可拆件:$('f_split').checked,開門方式:$('f_door').value||null,開門深度:nn($('f_swing').value),品牌:$('f_brand').value,價錢:nn($('f_price').value),顏色:$('f_color').value.trim(),貨號:$('f_sku').value.trim(),產品連結:$('f_url').value.trim()||null,圖片:$('f_img').value.trim()||null,備註:$('f_note').value.trim()};
+  const data={名稱:name,長:nn($('f_l').value),闊:nn($('f_w').value),高:nn($('f_h').value),所屬:$('f_room').value||inferRoom(name),狀態:$('f_status').value,可拆件:$('f_split').checked,開門方式:$('f_door').value||null,開門深度:nn($('f_swing').value),品牌:$('f_brand').value,形態:$('f_shape').value,價錢:nn($('f_price').value),顏色:$('f_color').value.trim(),貨號:$('f_sku').value.trim(),產品連結:$('f_url').value.trim()||null,圖片:$('f_img').value.trim()||null,備註:$('f_note').value.trim()};
   closeSheet('shFurn');await write('furniture',isNew?'POST':'PATCH',id,data,()=>{const i=DB.furniture.findIndex(x=>x.id===id);const o=Object.assign({id},DB.furniture[i]||{},data);if(i>=0)DB.furniture[i]=o;else DB.furniture.push(o)})}
 async function delFurn(){const id=$('f_id').value;if(!confirm('刪除此傢俬？'))return;closeSheet('shFurn');await write('furniture','DELETE',id,undefined,()=>{DB.furniture=DB.furniture.filter(x=>x.id!==id)})}
 function openImportFurn(){$('importBox').value='';$('shImport').classList.add('on')}
@@ -774,7 +812,7 @@ async function s3dInit(){const f=DB.flats.find(x=>x.id===curFlat);if(!f)return;i
   try{S3.model=await s3dModelFor(f)}catch(e){$('s3dLoading').textContent='模型載入失敗：'+e.message;return}
   let layout=null;try{layout=f['3D佈局']?JSON.parse(f['3D佈局']):null}catch(e){}
   S3.layout=layout||{v:1,items:[],mat:{}};S3.layout.items=(S3.layout.items||[]).filter(i=>DB.furniture.some(x=>x.id===i.f));S3.flatId=f.id;
-  S3D.init({canvas:$('c3d'),model:S3.model,furniture:DB.furniture.filter(x=>x.狀態!=='不搬'),layout:S3.layout,imgProxy:s3dImg,onSelect:s3dRenderSel,onChange:()=>{S3.dirty=true;s3dRenderCost()}});
+  S3.photos=true;S3D.init({canvas:$('c3d'),model:S3.model,furniture:DB.furniture.filter(x=>x.狀態!=='不搬'),layout:S3.layout,imgProxy:s3dImg,photos:true,onSelect:s3dRenderSel,onChange:()=>{S3.dirty=true;s3dRenderCost()},width:S3.full?window.innerWidth:undefined,height:S3.full?window.innerHeight:undefined});
   S3.ready=true;S3.dirty=false;$('s3dLoading').style.display='none';
   $('s3dRoom').innerHTML=S3.model.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
   $('s3dFloorRoom').innerHTML='<option value="*">全屋地板</option>'+S3.model.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
@@ -786,13 +824,24 @@ function s3dRenderChips(){const rid=$('s3dRoom').value;const room=S3.model.rooms
   const chip=f=>`<button class="sm" style="margin:0 4px 4px 0;${f.品牌==='IKEA'?'border-color:#2f4f7a;color:#2f4f7a':''}" onclick="S3D.add('${f.id}',$('s3dRoom').value)">${esc(f.名稱)}${f.價錢?' $'+f.價錢:''}</button>`;
   $('s3dChips').innerHTML=(mine.length?`<div class="grp">${esc(room?room.name:'')}適用</div>`+mine.map(chip).join(''):'')+(others.length?`<div class="grp">其他</div>`+others.map(chip).join(''):'')}
 $('s3dRoom')&&$('s3dRoom').addEventListener('change',s3dRenderChips);
-function s3dRenderSel(idx){const el=$('s3dSel');if(idx==null){el.style.display='none';return}const it=S3.layout.items[idx];const f=DB.furniture.find(x=>x.id===it.f);if(!f){el.style.display='none';return}
+function s3dRenderSel(idx){const el=$('s3dSel');const fs=$('fsSel');if(idx==null){el.style.display='none';fs.style.display='none';return}const it=S3.layout.items[idx];const f=DB.furniture.find(x=>x.id===it.f);if(!f){el.style.display='none';fs.style.display='none';return}
+  fs.style.display=S3.full?'':'none';fs.innerHTML=`<b>${esc(f.名稱)}</b> <span class="sub">${f.長}×${f.闊}×${f.高||'?'}${f.價錢?' · '+money(f.價錢):''}</span><div class="split" style="margin-top:6px"><button onclick="S3D.rotate()">旋轉</button><button onclick="S3D.snapToWall()">貼牆</button><button onclick="S3D.duplicate()">複製</button><button class="danger" onclick="S3D.remove()">移除</button></div>`;
   el.style.display='';el.innerHTML=`<h3><span>${esc(f.名稱)}</span>${f.價錢?`<span class="tag blue">${money(f.價錢)}</span>`:''}</h3><div class="sub">${f.長}×${f.闊}×${f.高||'?'} cm · 位置 (${it.x}, ${it.y}) · ${it.rot||0}°${f.產品連結?` · <a href="${esc(f.產品連結)}" target="_blank">IKEA</a>`:''}</div>
-    <div class="split" style="margin-top:8px"><button class="sm" onclick="S3D.rotate()">旋轉 90°</button><button class="sm danger" onclick="S3D.remove()">移除</button><button class="sm" onclick="openFurn('${f.id}')">編輯尺寸</button></div>`}
+    <div class="split" style="margin-top:8px"><button class="sm" onclick="S3D.rotate()">旋轉 90°</button><button class="sm" onclick="S3D.snapToWall()">貼牆</button><button class="sm" onclick="S3D.duplicate()">複製</button><button class="sm danger" onclick="S3D.remove()">移除</button><button class="sm" onclick="openFurn('${f.id}')">編輯</button></div>`}
 function s3dRenderCost(){const el=$('s3dCost');if(!el)return;const placed=S3.layout.items.map(i=>DB.furniture.find(f=>f.id===i.f)).filter(Boolean);const buy=placed.filter(f=>f.狀態==='擬購'||f.品牌==='IKEA');const tot=buy.reduce((a,f)=>a+(f.價錢||0),0);
   const byRoom={};S3.layout.items.forEach(i=>{const f=DB.furniture.find(x=>x.id===i.f);if(!f||!(f.狀態==='擬購'||f.品牌==='IKEA'))return;const r=S3.model.rooms.find(rm=>rm.rects.some(([x1,y1,x2,y2])=>i.x+f.長/2>=x1&&i.x+f.長/2<=x2&&i.y+f.闊/2>=y1&&i.y+f.闊/2<=y2));const k=r?r.name:'未入房';byRoom[k]=(byRoom[k]||0)+(f.價錢||0)});
+  if($('fsCost'))$('fsCost').textContent=money(tot)+' · '+buy.length+' 件';
   el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline"><span>已放入擬購／IKEA ${buy.length} 件</span><b class="num" style="font-size:20px">${money(tot)}</b></div>${Object.keys(byRoom).length?`<div class="sub">${Object.entries(byRoom).map(([k,v])=>esc(k)+' '+money(v)).join(' · ')}</div>`:''}${buy.some(f=>!f.價錢)?'<div class="sub">有項目未填價錢，總額偏低。</div>':''}${S3.dirty?'<div class="sub" style="color:var(--bad)">佈局未儲存</div>':''}`}
-function s3dMode(m){if(!S3.ready)return;S3D.setMode(m);$('joy').style.display=m==='walk'?'':'none';$('b3dOrbit').style.background=m==='orbit'?'var(--accent-soft)':'';$('b3dWalk').style.background=m==='walk'?'var(--accent-soft)':''}
+function s3dMode(m){if(!S3.ready)return;S3D.setMode(m);S3.mode=m;$('joy').style.display=m==='walk'?'':'none';$('b3dOrbit').style.background=m==='orbit'?'var(--accent-soft)':'';$('b3dWalk').style.background=m==='walk'?'var(--accent-soft)':'';$('rOrbit').classList.toggle('on',m==='orbit');$('rWalk').classList.toggle('on',m==='walk')}
+function s3dFull(on){const wrap=$('c3dWrap');if(on){$('fs3d').appendChild(wrap);$('fs3d').classList.add('on');document.body.classList.add('fs3d-on');S3.full=true;const f=DB.flats.find(x=>x.id===curFlat);$('fsTitle').textContent=f?flatTitle(f):'3D';s3dFit();s3dRenderCost();s3dRenderSel(S3D.selected()?S3.layout.items.indexOf(S3D.selected()):null)}
+  else{$('c3dHome').appendChild(wrap);$('fs3d').classList.remove('on');document.body.classList.remove('fs3d-on');S3.full=false;s3dDrawer(null);S3D.resize()}}
+function s3dFit(){if(!S3.ready)return;if(S3.full)S3D.resize(window.innerWidth,window.innerHeight);else S3D.resize()}
+window.addEventListener('resize',()=>{if(S3.ready)s3dFit()});
+function s3dDrawer(kind){const d=$('fsDrawer');if(!kind||S3.drawer===kind){d.classList.remove('on');S3.drawer=null;return}S3.drawer=kind;d.classList.add('on');const body=$('fsDrawerBody');const title=$('fsDrawerTitle');
+  if(kind==='room'){title.textContent='前往房間';body.innerHTML=S3.model.rooms.map(r=>`<button class="sm" style="margin:0 6px 6px 0" onclick="S3D.teleport('${r.id}');$('s3dRoom').value='${r.id}';s3dRenderChips()">${esc(r.name)}</button>`).join('')+'<p class="hint">環視模式會把鏡頭對準該房；行走模式會把你傳送到房中央。</p>'}
+  if(kind==='furn'){title.textContent='放入傢俬（放到：'+esc((S3.model.rooms.find(r=>r.id===$('s3dRoom').value)||{}).name||'')+'）';body.innerHTML=`<div class="split" style="margin-bottom:8px"><select onchange="$('s3dRoom').value=this.value;s3dRenderChips();s3dDrawer('furn');s3dDrawer('furn')">${S3.model.rooms.map(r=>`<option value="${r.id}" ${r.id===$('s3dRoom').value?'selected':''}>${esc(r.name)}</option>`).join('')}</select><button class="sm" onclick="s3dImportPlan()">匯入平面佈局</button><button class="sm" onclick="S3.photos=!S3.photos;S3D.setPhotos(S3.photos);toast('相片立面：'+(S3.photos?'開':'關'))">相片立面</button></div>`+$('s3dChips').innerHTML}
+  if(kind==='mat'){title.textContent='材質';body.innerHTML=`<div class="grp">牆色</div>${$('s3dWalls').innerHTML}<div class="grp" style="margin-top:8px">地板</div><div class="split"><select id="fsFloorRoom">${$('s3dFloorRoom').innerHTML}</select><select id="fsFloorKind">${$('s3dFloorKind').innerHTML}</select><button class="sm" onclick="S3D.setFloor($('fsFloorRoom').value,$('fsFloorKind').value)">套用</button></div>`}
+  if(kind==='cost'){title.textContent='預算';body.innerHTML=$('s3dCost').innerHTML+`<div class="grp" style="margin-top:8px">已放入項目</div>`+S3.layout.items.map((i,k)=>{const f=DB.furniture.find(x=>x.id===i.f);return f?`<div class="fit"><div><div class="n">${esc(f.名稱)}</div><div class="d">${f.長}×${f.闊}×${f.高||'?'}${f.品牌==='IKEA'?' · IKEA':''}</div></div><div>${f.價錢?money(f.價錢):'—'} <button class="sm" onclick="S3D.select(${k});s3dRenderSel(${k});S3D.teleport('${(S3.model.rooms.find(r=>r.rects.some(([a,b,c,d])=>i.x+f.長/2>=a&&i.x+f.長/2<=c&&i.y+f.闊/2>=b&&i.y+f.闊/2<=d))||S3.model.rooms[0]).id}')">找</button></div></div>`:''}).join('')}}
 function s3dCeil(){if(S3.ready)toast(S3D.toggleCeiling()?'天花：開':'天花：關')}
 function s3dFloor(){if(!S3.ready)return;S3D.setFloor($('s3dFloorRoom').value,$('s3dFloorKind').value)}
 function s3dImportPlan(){if(!S3.ready)return;let n=0;const rooms=roomsOf(curFlat);S3.model.rooms.forEach(mr=>{const r=rooms.find(x=>x.名稱===mr.name||(x.類型===mr.type&&!rooms.some(y=>y.名稱===mr.name)));if(!r||!r.佈局)return;let lay=null;try{lay=JSON.parse(r.佈局)}catch(e){return}const [x1,y1]=mr.rects[0];(lay.items||[]).forEach(i=>{if(!DB.furniture.some(f=>f.id===i.f))return;if(!S3.layout.items.some(j=>j.f===i.f)){S3.layout.items.push({f:i.f,x:x1+i.x,y:y1+i.y,rot:i.rot||0});n++}})});S3D.setLayout(S3.layout);S3.dirty=true;s3dRenderCost();toast('已匯入 '+n+' 件')}
