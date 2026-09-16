@@ -49,13 +49,13 @@ export const SCHEMAS = {
     房數: "number", 廁所數: "number", 樓齡: "number", 座向: "select", 管理費: "number", 差餉季度: "number",
     包項目: "multi_select", 租期: "rich_text", 免租期日: "number", 交樓日: "date", 刊登日期: "date", 睇樓日期: "date",
     我評分: "number", 太太評分: "number", 標籤: "multi_select", 教會車程分鐘: "number", 工作車程分鐘: "number",
-    代理: "relation", 搬運估算: "number", AI摘要: "rich_text", 備註: "rich_text",
+    代理: "relation", 搬運估算: "number", AI摘要: "rich_text", 備註: "rich_text", 平面模型: "rich_text", "3D佈局": "rich_text",
   },
   rooms: {
     名稱: "title", 單位: "relation", 類型: "select", 長: "number", 闊: "number", 高: "number", 門闊: "number", 門高: "number",
     窗台深: "number", 冷氣位: "rich_text", 電掣位: "rich_text", 其他尺寸: "rich_text", 備註: "rich_text", 佈局: "rich_text",
   },
-  furniture: { 名稱: "title", 長: "number", 闊: "number", 高: "number", 所屬: "select", 狀態: "select", 可拆件: "checkbox", 開門方式: "select", 開門深度: "number", 備註: "rich_text" },
+  furniture: { 名稱: "title", 長: "number", 闊: "number", 高: "number", 所屬: "select", 狀態: "select", 可拆件: "checkbox", 開門方式: "select", 開門深度: "number", 品牌: "select", 價錢: "number", 貨號: "rich_text", 產品連結: "url", 圖片: "url", 顏色: "rich_text", 材質: "rich_text", 備註: "rich_text" },
   contacts: { 姓名: "title", 角色: "select", 公司: "rich_text", 電話: "phone_number", WhatsApp: "url", 佣金: "rich_text", 評價: "select", 最後聯絡: "date", 備註: "rich_text" },
   offers: { 摘要: "title", 單位: "relation", 日期: "date", 類型: "select", 金額: "number", 要求項目: "multi_select", 狀態: "select", 誰跟進: "select", 經誰: "relation", 詳情: "rich_text" },
   checks: {
@@ -73,7 +73,7 @@ async function notion(method, path, body) {
   if (!r.ok) throw Object.assign(new Error(`Notion ${r.status}: ${j.message || r.statusText}`), { status: r.status, notion: j });
   return j;
 }
-const text = (s) => [{ type: "text", text: { content: String(s ?? "").slice(0, 2000) } }];
+const text = (s) => { const str = String(s ?? ""); const out = []; for (let i = 0; i < Math.max(1, str.length); i += 2000) out.push({ type: "text", text: { content: str.slice(i, i + 2000) } }); return out.slice(0, 100); };
 
 export function toProps(schema, data) {
   const p = {};
@@ -308,6 +308,47 @@ async function importListing(url) {
   return parsed;
 }
 
+/* ---------- IKEA HK 產品頁解析（可能被機械人攔截；前端另有書籤方案） ---------- */
+const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+export function parseIkea(html, url) {
+  const out = { 產品連結: url, 品牌: "IKEA", 狀態: "擬購" };
+  const ld = [];
+  for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) { try { ld.push(JSON.parse(m[1].trim())); } catch { /* ignore */ } }
+  const nodes = ld.flatMap((x) => (Array.isArray(x) ? x : x && x["@graph"] ? x["@graph"] : [x])).filter(Boolean);
+  const prod = nodes.find((n) => n["@type"] === "Product" || (Array.isArray(n["@type"]) && n["@type"].includes("Product")));
+  if (prod) {
+    out.名稱 = String(prod.name || "").trim(); out.貨號 = String(prod.sku || prod.productID || "").trim();
+    const offer = Array.isArray(prod.offers) ? prod.offers[0] : prod.offers; if (offer && offer.price) out.價錢 = Number(String(offer.price).replace(/[^\d.]/g, ""));
+    const img = Array.isArray(prod.image) ? prod.image[0] : prod.image; if (img) out.圖片 = typeof img === "string" ? img : img.url;
+    if (prod.color) out.顏色 = String(prod.color); if (prod.material) out.材質 = String(prod.material);
+  }
+  const t = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+  if (!out.名稱) { const tt = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i); if (tt) out.名稱 = tt[1].split(/\s*[|｜-]\s*/)[0].trim(); }
+  if (!out.價錢) { const m = t.match(/\$\s*([\d,]{2,7})(?:\.\d+)?/); if (m) out.價錢 = Number(m[1].replace(/,/g, "")); }
+  if (!out.貨號) { const m = url.match(/art-(\d{6,9})/) || t.match(/(?:貨號|產品編號|Article number)[:：\s]*([\d.]{8,12})/); if (m) out.貨號 = m[1].replace(/\./g, ""); }
+  const dim = (k) => { const m = t.match(new RegExp("(?:" + k + ")[:：]?\\s*([\\d.]+)\\s*(?:cm|厘米|公分)")); return m ? Number(m[1]) : null; };
+  out.長 = dim("闊度|闊|Width") ; out.闊 = dim("深度|深|Depth"); out.高 = dim("高度|高|Height");
+  if (!out.長) { const m = t.match(/(\d{2,3})\s*[x×X]\s*(\d{2,3})\s*(?:[x×X]\s*(\d{2,3}))?\s*(?:cm|厘米)/); if (m) { out.長 = Number(m[1]); out.闊 = Number(m[2]); if (m[3]) out.高 = Number(m[3]); } }
+  if (!out.圖片) { const og = html.match(/property=["']og:image["'][^>]*content=["']([^"']+)/i); if (og) out.圖片 = og[1]; }
+  out.raw = { ld: ld.length, bytes: html.length, hasProduct: !!prod };
+  return out;
+}
+async function importIkea(url) {
+  const r = await fetch(url, { headers: { "User-Agent": UA, "Accept-Language": "zh-HK,zh;q=0.9,en;q=0.8", Accept: "text/html" }, redirect: "follow" });
+  const html = await r.text();
+  const blocked = r.status === 403 || r.status === 503 || /cf-challenge|Just a moment|Access Denied|captcha/i.test(html.slice(0, 5000));
+  const parsed = parseIkea(html, url); parsed.raw.httpStatus = r.status; parsed.blocked = blocked;
+  if (blocked || !parsed.名稱) parsed.warning = "IKEA 網站攔截伺服器抓取（HTTP " + r.status + "）；請用 Safari 書籤方式加入";
+  return parsed;
+}
+// 圖片代理：把產品相片轉成 data URL，供 3D 貼圖（WebGL 需同源）
+async function proxyImage(u) {
+  const r = await fetch(u, { headers: { "User-Agent": UA, Referer: "https://www.ikea.com.hk/" } });
+  if (!r.ok) throw Object.assign(new Error("image " + r.status), { status: 502 });
+  const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 4_000_000) throw Object.assign(new Error("image too large"), { status: 413 });
+  return { data: "data:" + (r.headers.get("content-type") || "image/jpeg") + ";base64," + buf.toString("base64"), bytes: buf.length };
+}
+
 /* ---------- LLM（Claude 或 Gemini，自動選） ---------- */
 const GEMINI_KEY = process.env.GEMINI_API_KEY || process.env.GERMINI_API_KEY || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || process.env.GERMINI_MODEL || "gemini-2.5-flash";
@@ -422,7 +463,7 @@ function zipStore(files) { // files: [{name, data:Buffer}] → 無壓縮、64-by
 }
 const PALETTE = [[0.55, 0.42, 0.12], [0.18, 0.35, 0.62], [0.36, 0.55, 0.32], [0.62, 0.30, 0.25], [0.45, 0.40, 0.55], [0.30, 0.50, 0.55], [0.60, 0.50, 0.35], [0.40, 0.40, 0.40]];
 export function buildUSDA(spec) {
-  const items = (spec.items || []).slice(0, 40); const room = spec.room || null;
+  const items = (spec.items || []).slice(0, 160); const room = spec.room || null;
   const cm = (v) => (Number(v) || 0) / 100;
   const box = (name, w, h, d, tx, ty, tz, rotY, rgb, opacity) => {
     const hw = w / 2, hh = h / 2, hd = d / 2; const safe = name.replace(/[^A-Za-z0-9_]/g, "_").replace(/^(\d)/, "_$1") || "item";
@@ -447,11 +488,11 @@ export function buildUSDA(spec) {
   let body = "";
   const rl = room && room.l ? cm(room.l) : 0, rw = room && room.w ? cm(room.w) : 0;
   items.forEach((it, i) => {
-    const w = cm(it.w), d = cm(it.d), h = cm(it.h) || 0.02; const rgb = PALETTE[i % PALETTE.length];
+    const w = cm(it.w), d = cm(it.d), h = cm(it.h) || 0.02; const rgb = Array.isArray(it.c) && it.c.length === 3 ? it.c : PALETTE[i % PALETTE.length];
     const rot = Number(it.rot) || 0; const fw = rot % 180 ? d : w, fd = rot % 180 ? w : d;   // 平面圖上的佔位
     let tx, tz;
     if (room && it.x != null) { tx = cm(it.x) + fw / 2 - rl / 2; tz = cm(it.z) + fd / 2 - rw / 2; } else { tx = i * 1.2; tz = 0; }
-    body += box(String(it.n || "item" + i), w, h, d, tx, h / 2, tz, rot % 180 ? 90 : 0, rgb, 1);
+    body += box(String(it.n || "item" + i), w, h, d, tx, cm(it.y0 || 0) + h / 2, tz, rot % 180 ? 90 : 0, rgb, 1);
     mats.push(`
         def Material "${String(it.n || "item" + i).replace(/[^A-Za-z0-9_]/g, "_").replace(/^(\d)/, "_$1") || "item"}_mat"
         {
@@ -530,6 +571,8 @@ export async function handler(event) {
       return reply(200, { ...Object.fromEntries(kinds.map((k, i) => [k, res[i]])), fetched: new Date().toISOString() });
     }
     if (path === "/import" && method === "POST") { if (!body.url) return reply(400, { error: "url required" }); return reply(200, await importListing(body.url)); }
+    if (path === "/ikea" && method === "POST") { if (!body.url) return reply(400, { error: "url required" }); return reply(200, await importIkea(body.url)); }
+    if (path === "/img" && method === "GET") { if (!q.u) return reply(400, { error: "u required" }); return reply(200, await proxyImage(q.u)); }
     if (path === "/analyze" && method === "POST") { if (!body.flat_id) return reply(400, { error: "flat_id required" }); return reply(200, await analyzeFlat(body.flat_id)); }
     if (path === "/analyze-photo" && method === "POST") { if (!body.image_base64) return reply(400, { error: "image_base64 required" }); return reply(200, await analyzePhoto(body)); }
     if (path === "/compare" && method === "POST") return reply(200, await compareFlats(body));

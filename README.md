@@ -1,9 +1,11 @@
-# 睇樓資料庫（flat-tracker）v2.0
+# 睇樓資料庫（flat-tracker）v4.0
 
 Jay 與太太共用的租樓決策工具：GitHub Pages PWA（兩部電話同一網址）＋ AWS Lambda ＋ Notion（六個 database）＋ Claude 分析。
 
 ```
 docs/index.html     前端 PWA（GitHub Pages 由 /docs 發佈）
+docs/scene3d.js     3D 引擎（Three.js r128）
+docs/nanshan-f.json 南山閣 F 全屋幾何
 lambda/index.mjs    Notion 代理 + 28Hse 抓取 + Claude 分析（Node.js 20，Function URL）
 手冊.md             逐步部署與使用手冊（請先讀）
 ```

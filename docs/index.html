@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#f6f3ec">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>睇樓資料庫</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="scene3d.js?v=40"></script>
 <style>
   :root{--ink:#1c1b18;--ink2:#4a4741;--mute:#7a7569;--paper:#f6f3ec;--card:#fffdf8;--line:#cfc7b6;--line2:#e6e0d2;--accent:#8a6d1e;--accent-2:#b8963a;--accent-soft:#f1e8cf;--ok:#2f6b3a;--bad:#a3322a;--warn:#8a6d1e;--blue:#2f4f7a;--r:12px;
     --btn-grad:linear-gradient(180deg,#fffefb 0%,#ece7da 100%);--btn-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -1px 0 rgba(0,0,0,.05) inset,0 2px 3px rgba(28,27,24,.14),0 6px 12px -6px rgba(28,27,24,.18);--btn-active:0 2px 4px rgba(0,0,0,.22) inset,0 1px 0 rgba(255,255,255,.4)}
@@ -92,7 +94,7 @@
 </style>
 </head>
 <body>
-<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v3.0</span></h1><span class="st" id="syncSt">—</span></header>
+<header><h1 id="hdr">睇樓資料庫 <span style="font-size:11px;font-weight:600;color:#3d3300">v4.0</span></h1><span class="st" id="syncSt">—</span></header>
 
 <main>
   <!-- 看板 -->
@@ -121,7 +123,7 @@
   <section id="v-detail" class="view">
     <div class="topbar"><button class="sm" onclick="go(prevView||'board')">‹ 返回</button><h2 id="dTitle"></h2><button class="sm" onclick="openFlat(curFlat)">編輯</button></div>
     <div class="tabs">
-      <button class="on" data-t="info" onclick="tab('info')">資料</button><button data-t="rooms" onclick="tab('rooms')">房間</button><button data-t="fit" onclick="tab('fit')">配對</button><button data-t="plan" onclick="tab('plan')">平面</button><button data-t="check" onclick="tab('check')">檢查表</button><button data-t="offers" onclick="tab('offers')">出價</button><button data-t="ai" onclick="tab('ai')">AI</button>
+      <button class="on" data-t="info" onclick="tab('info')">資料</button><button data-t="rooms" onclick="tab('rooms')">房間</button><button data-t="fit" onclick="tab('fit')">配對</button><button data-t="plan" onclick="tab('plan')">平面</button><button data-t="s3d" onclick="tab('s3d')">3D</button><button data-t="check" onclick="tab('check')">檢查表</button><button data-t="offers" onclick="tab('offers')">出價</button><button data-t="ai" onclick="tab('ai')">AI</button>
     </div>
     <div id="t-info" class="tab on"></div>
     <div id="t-rooms" class="tab"><div class="split"><button class="primary" onclick="openRoom()">＋ 新增房間</button><button onclick="copySummary()">複製摘要</button></div><div id="roomList" style="margin-top:10px"></div></div>
@@ -135,6 +137,20 @@
       <div id="planInfo" class="sub" style="margin-top:6px"></div>
       <div class="split" style="margin-top:8px"><button class="sm" onclick="planRotate()">旋轉 90°</button><button class="sm danger" onclick="planRemove()">移除</button><button class="sm tape" onclick="planSave()">儲存佈局</button><button class="sm" onclick="planExport()">匯出圖片</button></div>
     </div>
+    <div id="t-s3d" class="tab">
+      <div class="split" style="margin-bottom:8px"><button class="sm" id="b3dOrbit" onclick="s3dMode('orbit')">環視</button><button class="sm" id="b3dWalk" onclick="s3dMode('walk')">行走</button><button class="sm" onclick="s3dCeil()">天花</button><button class="sm" onclick="s3dAR()">AR</button><button class="sm" onclick="s3dSnap()">截圖</button></div>
+      <div style="position:relative"><canvas id="c3d" style="width:100%;border:1px solid var(--line);border-radius:12px;touch-action:none;background:#f6f3ec"></canvas>
+        <div id="joy" style="display:none;position:absolute;left:14px;bottom:14px;width:96px;height:96px;border-radius:50%;background:rgba(28,27,24,.15);border:1px solid rgba(28,27,24,.3);touch-action:none"><div id="joyK" style="position:absolute;left:33px;top:33px;width:30px;height:30px;border-radius:50%;background:var(--ink);opacity:.8"></div></div>
+        <div id="s3dLoading" class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(246,243,236,.8)">3D 載入中…</div></div>
+      <p class="hint">一指拖動＝旋轉，兩指＝縮放／平移；點傢俬選取，再拖動即可移位。「行走」模式：左下搖桿走動、右方拖動視線（視高 160）。</p>
+      <div id="s3dSel" class="card" style="display:none"></div>
+      <div class="split"><select id="s3dRoom"></select><button class="sm tape" onclick="s3dImportPlan()">匯入平面佈局</button><button class="sm" onclick="s3dSave()">儲存</button></div>
+      <div id="s3dChips" style="margin:8px 0"></div>
+      <h3 style="margin:10px 0 6px">材質</h3>
+      <div id="s3dWalls" style="margin-bottom:6px"></div>
+      <div class="split"><select id="s3dFloorRoom"><option value="*">全屋地板</option></select><select id="s3dFloorKind"></select><button class="sm" onclick="s3dFloor()">套用</button></div>
+      <h3 style="margin:12px 0 6px">預算</h3><div id="s3dCost" class="card"></div>
+    </div>
     <div id="t-check" class="tab"></div>
     <div id="t-offers" class="tab"><button class="primary" style="width:100%" onclick="openOffer()">＋ 記錄出價／要求／回覆</button><div id="offerList" style="margin-top:10px"></div></div>
     <div id="t-ai" class="tab"></div>
@@ -142,7 +158,8 @@
 
   <!-- 傢俬 -->
   <section id="v-furn" class="view">
-    <div class="split"><button class="primary" onclick="openFurn()">＋ 新增傢俬</button><button onclick="openImportFurn()">貼上清單匯入</button></div>
+    <div class="split"><button class="primary" onclick="openFurn()">＋ 新增傢俬</button><button class="tape" onclick="openIkea()">＋ IKEA 產品</button><button onclick="openImportFurn()">匯入清單</button></div>
+    <div id="furnCost" class="hint" style="margin-top:8px"></div>
     <div id="furnList" style="margin-top:12px"></div>
   </section>
 
@@ -190,7 +207,7 @@
     <div class="hint">iPhone 12 Pro 以上用內置「測距儀」App（LiDAR，±1–2 cm）量牆長、門闊、樓底；量完即入本 App。整間房掃描：magicplan / Polycam 再抄數。相片：用「AI」分頁「相片檢查」即時分析，或上載至 Notion 單位頁。</div>
     <h2>本機</h2>
     <button class="danger sm" onclick="clearLocal()">清除本機快取（Notion 不受影響）</button>
-    <p class="hint" style="margin-top:12px">v3.0 · 2026-09-09</p>
+    <p class="hint" style="margin-top:12px">v4.0 · 2026-09-16</p>
   </section>
 </main>
 
@@ -256,11 +273,25 @@
     <div class="split"><div><label class="f">所屬</label><select id="f_room"><option value="">—</option><option>客廳</option><option>睡房</option><option>書房</option><option>BB</option><option>廚房</option><option>其他</option></select></div><div><label class="f">狀態</label><select id="f_status"><option>現有</option><option>擬購</option><option>不搬</option></select></div></div>
     <div class="split"><div><label class="f">開門方式</label><select id="f_door"><option value="">（自動推算）</option><option>無</option><option>掩門</option><option>趟門</option><option>抽屜</option><option>摺門</option></select></div><div><label class="f">開門深度 (cm)</label><input id="f_swing" type="number" inputmode="decimal" placeholder="掩門＝單扇門闊"></div></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" id="f_split" style="width:auto;min-height:0"> 可拆件</label>
+    <div class="split"><div><label class="f">品牌</label><select id="f_brand"><option>現有</option><option>IKEA</option><option>其他</option></select></div><div><label class="f">價錢 (HKD)</label><input id="f_price" type="number" inputmode="numeric"></div></div>
+    <div class="split"><div><label class="f">顏色</label><input id="f_color" placeholder="白色 / 橡木"></div><div><label class="f">貨號</label><input id="f_sku"></div></div>
+    <div><label class="f">產品連結</label><input id="f_url" inputmode="url" autocapitalize="off"></div>
+    <div><label class="f">圖片連結（3D 立面貼圖）</label><input id="f_img" inputmode="url" autocapitalize="off"></div>
     <div><label class="f">備註</label><input id="f_note"></div>
     <div class="split actions"><button class="primary" onclick="saveFurn()">儲存</button><button class="danger" id="f_del" onclick="delFurn()" style="display:none">刪除</button></div>
   </div>
 </div></div>
 
+<!-- IKEA -->
+<div class="sheet" id="shIkea" onclick="if(event.target===this)closeSheet('shIkea')"><div class="panel">
+  <div class="topbar"><h2>加入 IKEA 產品</h2><button class="sm" onclick="closeSheet('shIkea')">✕ 取消</button></div>
+  <div class="stack">
+    <div><label class="f">方法一：貼上 IKEA HK 產品網址</label><div class="split"><input id="ik_url" inputmode="url" autocapitalize="off" placeholder="https://www.ikea.com.hk/zh/products/..."><button class="sm tape" style="flex:0 0 auto" onclick="ikeaFetch()">抓取</button></div><div id="ik_msg" class="hint"></div></div>
+    <div><label class="f">方法二：Safari 書籤（IKEA 攔截伺服器時用）</label>
+      <p class="hint">一次性設定：Safari 隨便加一個書籤 → 編輯 → 網址貼上以下代碼。之後在 IKEA 產品頁按該書籤，資料會自動帶回本 App。</p>
+      <div class="split"><button class="sm" onclick="copyBookmarklet()">複製書籤代碼</button><button class="sm" onclick="window.open('https://www.ikea.com.hk/zh','_blank')">開 IKEA HK</button></div></div>
+  </div>
+</div></div>
 <!-- 傢俬匯入 -->
 <div class="sheet" id="shImport" onclick="if(event.target===this)closeSheet('shImport')"><div class="panel">
   <div class="topbar"><h2>貼上傢俬清單</h2><button class="sm" onclick="closeSheet('shImport')">✕ 取消</button></div><p class="hint">每行：<span class="mono">名稱, 長, 闊, 高</span>（cm）</p>
@@ -397,7 +428,7 @@ function go(v){
   if(v==='compare')renderComparePick();
   window.scrollTo(0,0);
 }
-function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+t));if(t==='fit')renderFit();if(t==='plan')planInit();if(t==='check')renderCheck();if(t==='ai')renderAI()}
+function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+t));if(t==='fit')renderFit();if(t==='plan')planInit();if(t==='s3d')s3dInit();if(t==='check')renderCheck();if(t==='ai')renderAI()}
 function closeSheet(id){$(id).classList.remove('on')}
 function openDetail(id){curFlat=id;go('detail');tab('info');renderDetail()}
 
@@ -598,9 +629,9 @@ async function aiCompare(){const ids=cmpSel.filter(id=>!id.startsWith('tmp_'));i
 function renderFurn(){const el=$('furnList');if(!DB.furniture.length){el.innerHTML='<div class="empty">未有傢俬（Notion 傢俬表為空或未同步）。</div>';return}
   const groups={};DB.furniture.forEach(f=>{(groups[f.所屬||'其他']=groups[f.所屬||'其他']||[]).push(f)});
   el.innerHTML=Object.entries(groups).map(([g,l])=>`<h2>${esc(g)}</h2>`+l.map(f=>{const sw=swingOf(f);return `<div class="card tap" onclick="openFurn('${f.id}')"><h3><span>${esc(f.名稱)}</span><span><span class="tag ${f.狀態==='擬購'?'blue':f.狀態==='不搬'?'gray':'ok'}">${esc(f.狀態||'現有')}</span> <button class="sm" onclick="event.stopPropagation();arOne('${f.id}')">AR</button></span></h3><div class="dims">${f.長||'–'} × ${f.闊||'–'} × ${f.高||'–'} cm${f.可拆件?' · 可拆件':''}${sw.mode!=='無'?' · '+sw.mode+' '+sw.depth+'cm'+(sw.inferred?'（推算）':''):''}${f.備註?`<span class="ft">${esc(f.備註)}</span>`:''}</div></div>`}).join('')).join('')}
-function openFurn(id){const f=id?DB.furniture.find(x=>x.id===id):null;$('furnTitle').textContent=f?'編輯傢俬':'新增傢俬';$('f_id').value=f?f.id:'';const set=(el,v)=>$(el).value=v==null?'':v;set('f_name',f?f.名稱:'');set('f_l',f?f.長:'');set('f_w',f?f.闊:'');set('f_h',f?f.高:'');set('f_room',f?f.所屬:'');set('f_status',f?(f.狀態||'現有'):'現有');$('f_split').checked=!!(f&&f.可拆件);set('f_door',f?(f.開門方式||''):'');set('f_swing',f?f.開門深度:'');set('f_note',f?f.備註:'');$('f_del').style.display=f?'':'none';$('shFurn').classList.add('on')}
+function openFurn(id){const f=id?DB.furniture.find(x=>x.id===id):null;$('furnTitle').textContent=f?'編輯傢俬':'新增傢俬';$('f_id').value=f?f.id:'';const set=(el,v)=>$(el).value=v==null?'':v;set('f_name',f?f.名稱:'');set('f_l',f?f.長:'');set('f_w',f?f.闊:'');set('f_h',f?f.高:'');set('f_room',f?f.所屬:'');set('f_status',f?(f.狀態||'現有'):'現有');$('f_split').checked=!!(f&&f.可拆件);set('f_door',f?(f.開門方式||''):'');set('f_swing',f?f.開門深度:'');set('f_brand',f?(f.品牌||'現有'):'現有');set('f_price',f?f.價錢:'');set('f_color',f?f.顏色:'');set('f_sku',f?f.貨號:'');set('f_url',f?f.產品連結:'');set('f_img',f?f.圖片:'');set('f_note',f?f.備註:'');$('f_del').style.display=f?'':'none';$('shFurn').classList.add('on')}
 async function saveFurn(){const name=$('f_name').value.trim();if(!name){toast('請輸入名稱');return}const id=$('f_id').value||tmpId(),isNew=!$('f_id').value;
-  const data={名稱:name,長:nn($('f_l').value),闊:nn($('f_w').value),高:nn($('f_h').value),所屬:$('f_room').value||inferRoom(name),狀態:$('f_status').value,可拆件:$('f_split').checked,開門方式:$('f_door').value||null,開門深度:nn($('f_swing').value),備註:$('f_note').value.trim()};
+  const data={名稱:name,長:nn($('f_l').value),闊:nn($('f_w').value),高:nn($('f_h').value),所屬:$('f_room').value||inferRoom(name),狀態:$('f_status').value,可拆件:$('f_split').checked,開門方式:$('f_door').value||null,開門深度:nn($('f_swing').value),品牌:$('f_brand').value,價錢:nn($('f_price').value),顏色:$('f_color').value.trim(),貨號:$('f_sku').value.trim(),產品連結:$('f_url').value.trim()||null,圖片:$('f_img').value.trim()||null,備註:$('f_note').value.trim()};
   closeSheet('shFurn');await write('furniture',isNew?'POST':'PATCH',id,data,()=>{const i=DB.furniture.findIndex(x=>x.id===id);const o=Object.assign({id},DB.furniture[i]||{},data);if(i>=0)DB.furniture[i]=o;else DB.furniture.push(o)})}
 async function delFurn(){const id=$('f_id').value;if(!confirm('刪除此傢俬？'))return;closeSheet('shFurn');await write('furniture','DELETE',id,undefined,()=>{DB.furniture=DB.furniture.filter(x=>x.id!==id)})}
 function openImportFurn(){$('importBox').value='';$('shImport').classList.add('on')}
@@ -717,6 +748,61 @@ function planExport(){const c=$('planCanvas');const a=document.createElement('a'
   const end=()=>{start=null};c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
   window.addEventListener('resize',()=>{if(PLAN.room&&$('t-plan').classList.contains('on'))planDraw()})})();
 
+/* ===================== IKEA ===================== */
+function openIkea(){$('ik_url').value='';$('ik_msg').textContent='';$('shIkea').classList.add('on')}
+async function ikeaFetch(){const url=$('ik_url').value.trim();if(!url){toast('先貼網址');return}$('ik_msg').textContent='抓取中…';
+  try{const p=await api('POST','/ikea',{url});if(p.blocked||!p.名稱){$('ik_msg').textContent='⚠ '+(p.warning||'抓不到')+'。請用方法二。';return}closeSheet('shIkea');openFurnPrefill(p);$('ik_msg').textContent=''}catch(e){$('ik_msg').textContent='失敗：'+e.message+'。請用方法二。'}}
+function openFurnPrefill(p){openFurn();const set=(el,v)=>{if(v!=null&&v!=='')$(el).value=v};set('f_name',p.名稱);set('f_l',p.長);set('f_w',p.闊);set('f_h',p.高);set('f_brand',p.品牌||'IKEA');set('f_status',p.狀態||'擬購');set('f_price',p.價錢);set('f_color',p.顏色);set('f_sku',p.貨號);set('f_url',p.產品連結);set('f_img',p.圖片);if(p.名稱&&!$('f_room').value)$('f_room').value=inferRoom(p.名稱);toast('已帶入 IKEA 資料，請核對尺寸後儲存')}
+const BOOKMARKLET=`javascript:(function(){try{var d=document,j=null;[].forEach.call(d.querySelectorAll('script[type="application/ld+json"]'),function(s){try{var o=JSON.parse(s.textContent);(Array.isArray(o)?o:(o['@graph']||[o])).forEach(function(x){if(!j&&x['@type']=='Product')j=x})}catch(e){}});var t=d.body.innerText;function dm(k){var m=t.match(new RegExp('(?:'+k+')[:：]?\\\\s*([\\\\d.]+)\\\\s*(?:cm|厘米|公分)'));return m?m[1]:''}var xyz=t.match(/(\\\\d{2,3})\\\\s*[x×X]\\\\s*(\\\\d{2,3})\\\\s*(?:[x×X]\\\\s*(\\\\d{2,3}))?\\\\s*(?:cm|厘米)/);var of=j&&j.offers;if(Array.isArray(of))of=of[0];var img=j&&j.image;if(Array.isArray(img))img=img[0];if(img&&img.url)img=img.url;var p={n:(j&&j.name)||d.title.split(/[|｜]/)[0],p:(of&&of.price)||((t.match(/\\\\$\\\\s*([\\\\d,]{2,7})/)||[])[1]||''),i:img||((d.querySelector('meta[property="og:image"]')||{}).content||''),s:(j&&j.sku)||((location.pathname.match(/art-(\\\\d+)/)||[])[1]||''),u:location.href,w:dm('闊度|闊|Width')||(xyz&&xyz[1])||'',d:dm('深度|深|Depth')||(xyz&&xyz[2])||'',h:dm('高度|高|Height')||(xyz&&xyz[3])||'',c:(j&&j.color)||''};location.href='APPURL#ikea='+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(p)))))}catch(e){alert('讀取失敗：'+e)}})();`;
+async function copyBookmarklet(){const code=BOOKMARKLET.replace('APPURL',location.origin+location.pathname);try{await navigator.clipboard.writeText(code);toast('已複製書籤代碼，貼到 Safari 書籤網址欄',3000)}catch(e){prompt('長按複製：',code)}}
+function handleIkeaHash(){const h=new URLSearchParams(location.hash.replace(/^#/,''));const raw=h.get('ikea');if(!raw)return false;try{const p=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(raw)))));history.replaceState(null,'',location.pathname+location.search);go('furn');openFurnPrefill({名稱:p.n,價錢:nn(String(p.p).replace(/,/g,'')),長:nn(p.w),闊:nn(p.d),高:nn(p.h),圖片:p.i,貨號:p.s,產品連結:p.u,顏色:p.c,品牌:'IKEA',狀態:'擬購'});return true}catch(e){toast('IKEA 資料解析失敗');return false}}
+function renderFurnCost(){const el=$('furnCost');if(!el)return;const buy=DB.furniture.filter(f=>f.狀態==='擬購');const tot=buy.reduce((a,f)=>a+(f.價錢||0),0);el.innerHTML=buy.length?`擬購 ${buy.length} 件 · 合計 <b>${money(tot)}</b>${buy.some(f=>!f.價錢)?'（'+buy.filter(f=>!f.價錢).length+' 件未有價錢）':''}`:'未有擬購項目。'}
+
+/* ===================== 3D ===================== */
+const S3 = { model:null, layout:null, ready:false, flatId:null, dirty:false, imgCache:{} };
+function s3dModelFor(f){
+  if(f.平面模型&&f.平面模型.trim().startsWith('{')){try{return Promise.resolve(JSON.parse(f.平面模型))}catch(e){}}
+  if(/南山閣|10座/.test(flatTitle(f)+(f.大廈||''))&&/F$/i.test(f.單位||'')) return fetch('nanshan-f.json?v=40').then(r=>r.json()).then(m=>{s3dPersistModel(f.id,m);return m});
+  // 後備：按房間表把每間房並排（無門窗）
+  const rooms=roomsOf(f.id).filter(r=>r.長&&r.闊);let x=0;const m={v:1,unit:'cm',ceiling:240,wall:{ext:15,int:10},rooms:[],doors:[],windows:[],sockets:[]};
+  rooms.forEach((r,i)=>{m.rooms.push({id:'r'+i,name:r.名稱,type:r.類型||'其他',rects:[[x,0,x+r.長,r.闊]],floor:r.類型==='廚房'||r.類型==='廁所'?'tile':'oak'});if(r.門闊)m.doors.push({id:'d'+i,room:'r'+i,side:'S',from:x+10,to:x+10+r.門闊,h:r.門高||200});x+=r.長+30});
+  return Promise.resolve(m)}
+async function s3dPersistModel(fid,m){if(fid.startsWith('tmp_'))return;try{const s=JSON.stringify(m);const f=DB.flats.find(x=>x.id===fid);if(f&&f.平面模型===s)return;await api('PATCH','/flats/'+fid,{平面模型:s});if(f)f.平面模型=s;saveLocal()}catch(e){}}
+function s3dImg(url){if(!url)return Promise.resolve(null);if(S3.imgCache[url]!==undefined)return Promise.resolve(S3.imgCache[url]);return api('GET','/img?u='+encodeURIComponent(url),null,30000).then(r=>{S3.imgCache[url]=r.data||null;return r.data||null}).catch(()=>{S3.imgCache[url]=null;return null})}
+async function s3dInit(){const f=DB.flats.find(x=>x.id===curFlat);if(!f)return;if(!window.THREE||!window.S3D){$('s3dLoading').textContent='3D 引擎載入失敗（需要網絡）';return}
+  $('s3dLoading').style.display='flex';
+  try{S3.model=await s3dModelFor(f)}catch(e){$('s3dLoading').textContent='模型載入失敗：'+e.message;return}
+  let layout=null;try{layout=f['3D佈局']?JSON.parse(f['3D佈局']):null}catch(e){}
+  S3.layout=layout||{v:1,items:[],mat:{}};S3.layout.items=(S3.layout.items||[]).filter(i=>DB.furniture.some(x=>x.id===i.f));S3.flatId=f.id;
+  S3D.init({canvas:$('c3d'),model:S3.model,furniture:DB.furniture.filter(x=>x.狀態!=='不搬'),layout:S3.layout,imgProxy:s3dImg,onSelect:s3dRenderSel,onChange:()=>{S3.dirty=true;s3dRenderCost()}});
+  S3.ready=true;S3.dirty=false;$('s3dLoading').style.display='none';
+  $('s3dRoom').innerHTML=S3.model.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  $('s3dFloorRoom').innerHTML='<option value="*">全屋地板</option>'+S3.model.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  $('s3dFloorKind').innerHTML=Object.entries(S3D.FLOORS).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  $('s3dWalls').innerHTML=Object.entries(S3D.WALLS).map(([n,hex])=>`<button class="sm" style="background:${hex};margin:0 4px 4px 0;border-color:#b9b09b" onclick="S3D.setWall('${hex}')">${n}</button>`).join('');
+  s3dRenderChips();s3dRenderSel(null);s3dRenderCost();s3dMode('orbit')}
+function s3dRenderChips(){const rid=$('s3dRoom').value;const room=S3.model.rooms.find(r=>r.id===rid);const want=(ROOM_MATCH[room?room.type:'']||[]);
+  const all=DB.furniture.filter(f=>f.狀態!=='不搬'&&f.長&&f.闊);const mine=all.filter(f=>want.includes(f.所屬||inferRoom(f.名稱)));const others=all.filter(f=>!mine.includes(f));
+  const chip=f=>`<button class="sm" style="margin:0 4px 4px 0;${f.品牌==='IKEA'?'border-color:#2f4f7a;color:#2f4f7a':''}" onclick="S3D.add('${f.id}',$('s3dRoom').value)">${esc(f.名稱)}${f.價錢?' $'+f.價錢:''}</button>`;
+  $('s3dChips').innerHTML=(mine.length?`<div class="grp">${esc(room?room.name:'')}適用</div>`+mine.map(chip).join(''):'')+(others.length?`<div class="grp">其他</div>`+others.map(chip).join(''):'')}
+$('s3dRoom')&&$('s3dRoom').addEventListener('change',s3dRenderChips);
+function s3dRenderSel(idx){const el=$('s3dSel');if(idx==null){el.style.display='none';return}const it=S3.layout.items[idx];const f=DB.furniture.find(x=>x.id===it.f);if(!f){el.style.display='none';return}
+  el.style.display='';el.innerHTML=`<h3><span>${esc(f.名稱)}</span>${f.價錢?`<span class="tag blue">${money(f.價錢)}</span>`:''}</h3><div class="sub">${f.長}×${f.闊}×${f.高||'?'} cm · 位置 (${it.x}, ${it.y}) · ${it.rot||0}°${f.產品連結?` · <a href="${esc(f.產品連結)}" target="_blank">IKEA</a>`:''}</div>
+    <div class="split" style="margin-top:8px"><button class="sm" onclick="S3D.rotate()">旋轉 90°</button><button class="sm danger" onclick="S3D.remove()">移除</button><button class="sm" onclick="openFurn('${f.id}')">編輯尺寸</button></div>`}
+function s3dRenderCost(){const el=$('s3dCost');if(!el)return;const placed=S3.layout.items.map(i=>DB.furniture.find(f=>f.id===i.f)).filter(Boolean);const buy=placed.filter(f=>f.狀態==='擬購'||f.品牌==='IKEA');const tot=buy.reduce((a,f)=>a+(f.價錢||0),0);
+  const byRoom={};S3.layout.items.forEach(i=>{const f=DB.furniture.find(x=>x.id===i.f);if(!f||!(f.狀態==='擬購'||f.品牌==='IKEA'))return;const r=S3.model.rooms.find(rm=>rm.rects.some(([x1,y1,x2,y2])=>i.x+f.長/2>=x1&&i.x+f.長/2<=x2&&i.y+f.闊/2>=y1&&i.y+f.闊/2<=y2));const k=r?r.name:'未入房';byRoom[k]=(byRoom[k]||0)+(f.價錢||0)});
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline"><span>已放入擬購／IKEA ${buy.length} 件</span><b class="num" style="font-size:20px">${money(tot)}</b></div>${Object.keys(byRoom).length?`<div class="sub">${Object.entries(byRoom).map(([k,v])=>esc(k)+' '+money(v)).join(' · ')}</div>`:''}${buy.some(f=>!f.價錢)?'<div class="sub">有項目未填價錢，總額偏低。</div>':''}${S3.dirty?'<div class="sub" style="color:var(--bad)">佈局未儲存</div>':''}`}
+function s3dMode(m){if(!S3.ready)return;S3D.setMode(m);$('joy').style.display=m==='walk'?'':'none';$('b3dOrbit').style.background=m==='orbit'?'var(--accent-soft)':'';$('b3dWalk').style.background=m==='walk'?'var(--accent-soft)':''}
+function s3dCeil(){if(S3.ready)toast(S3D.toggleCeiling()?'天花：開':'天花：關')}
+function s3dFloor(){if(!S3.ready)return;S3D.setFloor($('s3dFloorRoom').value,$('s3dFloorKind').value)}
+function s3dImportPlan(){if(!S3.ready)return;let n=0;const rooms=roomsOf(curFlat);S3.model.rooms.forEach(mr=>{const r=rooms.find(x=>x.名稱===mr.name||(x.類型===mr.type&&!rooms.some(y=>y.名稱===mr.name)));if(!r||!r.佈局)return;let lay=null;try{lay=JSON.parse(r.佈局)}catch(e){return}const [x1,y1]=mr.rects[0];(lay.items||[]).forEach(i=>{if(!DB.furniture.some(f=>f.id===i.f))return;if(!S3.layout.items.some(j=>j.f===i.f)){S3.layout.items.push({f:i.f,x:x1+i.x,y:y1+i.y,rot:i.rot||0});n++}})});S3D.setLayout(S3.layout);S3.dirty=true;s3dRenderCost();toast('已匯入 '+n+' 件')}
+async function s3dSave(){if(!S3.ready)return;if(S3.flatId.startsWith('tmp_')){toast('單位未同步');return}const data={'3D佈局':JSON.stringify(S3D.layout())};await write('flats','PATCH',S3.flatId,data,()=>{const f=DB.flats.find(x=>x.id===S3.flatId);if(f)f['3D佈局']=data['3D佈局']});S3.dirty=false;s3dRenderCost();toast('3D 佈局已儲存')}
+function s3dAR(){if(!S3.ready)return;const spec=S3D.arSpec();if(!spec.items.length){toast('先放入傢俬');return}openAR(spec)}
+function s3dSnap(){if(!S3.ready)return;const a=document.createElement('a');a.href=S3D.snapshot();a.download='3d-'+Date.now()+'.png';a.click()}
+(function(){const j=$('joy');if(!j)return;let act=false;const k=$('joyK');const set=(dx,dy)=>{const r=Math.min(1,Math.hypot(dx,dy)/40);const a=Math.atan2(dy,dx);const px=Math.cos(a)*r*33,py=Math.sin(a)*r*33;k.style.left=(33+px)+'px';k.style.top=(33+py)+'px';S3D.joystick&&S3D.joystick(Math.cos(a)*r,Math.sin(a)*r)};
+  j.addEventListener('pointerdown',e=>{act=true;j.setPointerCapture(e.pointerId);const b=j.getBoundingClientRect();set(e.clientX-b.left-48,e.clientY-b.top-48)});j.addEventListener('pointermove',e=>{if(!act)return;const b=j.getBoundingClientRect();set(e.clientX-b.left-48,e.clientY-b.top-48)});
+  const end=()=>{act=false;k.style.left='33px';k.style.top='33px';S3D.joystick&&S3D.joystick(0,0)};j.addEventListener('pointerup',end);j.addEventListener('pointercancel',end);window.addEventListener('resize',()=>{if(S3.ready)S3D.resize()})})();
+
 /* ===================== 摘要 / 設定 ===================== */
 function summaryText(){const f=DB.flats.find(x=>x.id===curFlat);if(!f)return '';const rooms=roomsOf(f.id),L=[];
   L.push('【'+flatTitle(f)+'】'+(f.階段?' '+f.階段:'')+(f.睇樓日期?' '+f.睇樓日期:''));
@@ -735,7 +821,7 @@ async function saveCfg(condOnly){cfg.url=$('cfgUrl').value.trim();cfg.key=$('cfg
 function shareSetupLink(){const who=cfg.who==='Jay'?'太太':'Jay';const link=location.origin+location.pathname+'#k='+encodeURIComponent(cfg.key)+'&who='+encodeURIComponent(who);navigator.clipboard.writeText(link).then(()=>toast('已複製 '+who+' 的設定連結，WhatsApp 傳送即可'),()=>prompt('長按複製：',link))}
 function renderOutbox(){$('outboxInfo').textContent=outbox.length?(outbox.length+' 項未同步（'+outbox.map(o=>o.kind+' '+o.method).join('、')+'）'):'無待同步項目'}
 function clearLocal(){if(!confirm('清除本機快取及未同步佇列？'))return;localStorage.removeItem(CACHE_KEY);localStorage.removeItem(OUTBOX_KEY);DB={flats:[],rooms:[],furniture:[],contacts:[],offers:[],checks:[]};outbox=[];renderAll();toast('已清除')}
-function renderAll(){renderBoard();renderList();renderFurn();renderContacts();if($('v-detail').classList.contains('on'))renderDetail();if($('v-compare').classList.contains('on'))renderComparePick()}
+function renderAll(){renderBoard();renderList();renderFurn();renderFurnCost();renderContacts();if($('v-detail').classList.contains('on'))renderDetail();if($('v-compare').classList.contains('on'))renderComparePick()}
 
 /* ===================== 啟動 ===================== */
 loadLocal();
@@ -745,7 +831,7 @@ if(!cfg.url)cfg.url=DEFAULT_URL;
   if(h.get('k')){cfg.key=h.get('k');changed=true}if(h.get('who')){cfg.who=h.get('who');changed=true}if(h.get('u')){cfg.url=h.get('u');changed=true}
   if(changed){saveLocal();toast('已透過連結完成設定（'+cfg.who+'）。請由此頁「加入主畫面」，KEY 會隨圖示保留。',3200)}})();
 saveLocal();renderAll();
-if(cfg.url&&cfg.key){sync(false);startPolling()}else{setSt('未設定',true);go('setup');$('cfgKey').focus()}
+if(cfg.url&&cfg.key){sync(false).then(()=>handleIkeaHash());startPolling()}else{setSt('未設定',true);go('setup');$('cfgKey').focus()}
 window.addEventListener('online',()=>{if(outbox.length)flushOutbox()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cfg.url)sync(false)});
 </script>
